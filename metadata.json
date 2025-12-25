@@ -1,0 +1,7 @@
+{
+  "name": "LiveWire: Ableton 12 Architect",
+  "description": "An AI-powered assistant for Ableton Live 12 sound design and workflow generation, specializing in detailed step-by-step tutorials.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
