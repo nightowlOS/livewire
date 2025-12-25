@@ -14,9 +14,15 @@ const App: React.FC = () => {
   const [showHistory, setShowHistory] = useState(false);
   
   // Feature states
-  const [theme, setTheme] = useState<Theme>('dark');
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window !== 'undefined') {
+        return (localStorage.getItem('ableton-theme') as Theme) || 'dark';
+    }
+    return 'dark';
+  });
   const [activeTab, setActiveTab] = useState<'history' | 'templates' | 'config'>('history');
   const [showHelp, setShowHelp] = useState(false);
+  const [copied, setCopied] = useState(false);
   
   // Template States
   const [templates, setTemplates] = useState<SavedTemplate[]>(() => {
@@ -29,6 +35,8 @@ const App: React.FC = () => {
   });
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState('');
+  const [newTemplateContent, setNewTemplateContent] = useState('');
+  const [newTemplateCategory, setNewTemplateCategory] = useState('Workflow');
 
   // Multi-modal state
   const [isRecording, setIsRecording] = useState(false);
@@ -39,9 +47,10 @@ const App: React.FC = () => {
   const audioChunksRef = useRef<Blob[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Apply theme to document
+  // Apply theme to document and persist
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('ableton-theme', theme);
   }, [theme]);
 
   // Save templates to local storage
@@ -49,9 +58,18 @@ const App: React.FC = () => {
     localStorage.setItem('ableton-templates', JSON.stringify(templates));
   }, [templates]);
 
-  // Suggestions for empty state
-  const suggestions = [
-    "Meld & Roar: Bi-timbral granular texture with multiband distortion",
+  // Techno Genres Configuration
+  const technoGenres = [
+    { label: "Rumble Techno", prompt: "Create a guide for a heavy Rumble Techno low-end chain using Reverb and Roar." },
+    { label: "Dub Techno", prompt: "Create a sound design recipe for Dub Techno chords using Analog and Echo." },
+    { label: "Hypnotic", prompt: "Create a workflow for rolling Hypnotic Techno loops using polymetric MIDI tools." },
+    { label: "Hard Groove", prompt: "Create a guide for Hard Groove Techno percussion processing." },
+    { label: "Industrial", prompt: "Create a guide for Industrial Techno distortion using Roar." }
+  ];
+
+  // General Suggestions
+  const quickTips = [
+    "Meld & Roar: Bi-timbral granular texture",
     "Roar: Multiband distortion for Drum Bus",
     "Workflow: Generative MIDI for trap hi-hats",
     "Glitchy breakbeats like a REX loop",
@@ -204,17 +222,26 @@ const App: React.FC = () => {
       setTheme(checked ? 'light' : 'dark');
   };
 
+  const openSaveModal = () => {
+    setNewTemplateContent(response);
+    setNewTemplateName('');
+    setNewTemplateCategory('Workflow');
+    setShowSaveModal(true);
+  };
+
   const saveTemplate = () => {
     if (!newTemplateName.trim()) return;
     const template: SavedTemplate = {
       id: Date.now().toString(),
       name: newTemplateName,
-      content: response,
+      content: newTemplateContent,
+      category: newTemplateCategory,
       createdAt: Date.now()
     };
     setTemplates(prev => [template, ...prev]);
     setShowSaveModal(false);
     setNewTemplateName('');
+    setNewTemplateContent('');
     setActiveTab('templates');
   };
 
@@ -226,6 +253,30 @@ const App: React.FC = () => {
     setResponse(template.content);
     setResponseImage(undefined);
     setShowHistory(false); // Close sidebar on mobile
+  };
+
+  const handleExport = () => {
+    if (!response) return;
+    const blob = new Blob([response], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ableton-guide-${new Date().toISOString().slice(0, 10)}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleCopy = async () => {
+    if (!response) return;
+    try {
+        await navigator.clipboard.writeText(response);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+        console.error('Failed to copy:', err);
+    }
   };
 
   return (
@@ -253,20 +304,49 @@ const App: React.FC = () => {
       {/* Save Template Modal */}
       {showSaveModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-           <div className="bg-ableton-surface border border-ableton-border shadow-2xl rounded-lg max-w-sm w-full p-6">
-              <h3 className="text-lg font-bold text-ableton-text mb-4">Save as Template</h3>
-              <input 
-                type="text" 
-                autoFocus
-                placeholder="Template Name (e.g. Techno Rumble)" 
-                value={newTemplateName}
-                onChange={(e) => setNewTemplateName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && saveTemplate()}
-                className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-ableton-text mb-4 focus:outline-none focus:border-ableton-accent"
-              />
+           <div className="bg-ableton-surface border border-ableton-border shadow-2xl rounded-lg max-w-2xl w-full p-6 flex flex-col max-h-[90vh]">
+              <h3 className="text-lg font-bold text-ableton-text mb-4">Save Template</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div className="space-y-1">
+                      <label className="text-xs text-ableton-muted uppercase tracking-wider font-bold">Template Name</label>
+                      <input 
+                        type="text" 
+                        autoFocus
+                        placeholder="e.g. Techno Rumble Chain" 
+                        value={newTemplateName}
+                        onChange={(e) => setNewTemplateName(e.target.value)}
+                        className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-ableton-text focus:outline-none focus:border-ableton-accent"
+                      />
+                  </div>
+                  <div className="space-y-1">
+                      <label className="text-xs text-ableton-muted uppercase tracking-wider font-bold">Category</label>
+                      <select 
+                        value={newTemplateCategory}
+                        onChange={(e) => setNewTemplateCategory(e.target.value)}
+                        className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-ableton-text focus:outline-none focus:border-ableton-accent"
+                      >
+                          <option value="Workflow">Workflow</option>
+                          <option value="Effect Rack">Effect Rack</option>
+                          <option value="Sound Design">Sound Design</option>
+                          <option value="Project Setup">Project Setup</option>
+                          <option value="Other">Other</option>
+                      </select>
+                  </div>
+              </div>
+
+              <div className="flex-1 min-h-[200px] mb-4 flex flex-col space-y-1">
+                 <label className="text-xs text-ableton-muted uppercase tracking-wider font-bold">Template Content (Editable)</label>
+                 <textarea 
+                    value={newTemplateContent}
+                    onChange={(e) => setNewTemplateContent(e.target.value)}
+                    className="flex-1 w-full bg-ableton-base border border-ableton-border rounded p-3 text-ableton-text font-mono text-xs focus:outline-none focus:border-ableton-accent resize-none leading-relaxed"
+                 />
+              </div>
+
               <div className="flex justify-end gap-3">
                 <Button variant="secondary" onClick={() => setShowSaveModal(false)}>Cancel</Button>
-                <Button onClick={saveTemplate} disabled={!newTemplateName.trim()}>Save</Button>
+                <Button onClick={saveTemplate} disabled={!newTemplateName.trim()}>Save Template</Button>
               </div>
            </div>
         </div>
@@ -313,7 +393,7 @@ const App: React.FC = () => {
                   >
                     <span className="truncate">{item.text || "(Image)"}</span>
                     {item.imageUrl && (
-                        <svg className="w-3 h-3 text-ableton-muted flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        <svg className="w-3 h-3 text-ableton-muted flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                     )}
                   </div>
                 ))}
@@ -330,7 +410,10 @@ const App: React.FC = () => {
                {templates.length > 0 ? templates.map((t) => (
                  <div key={t.id} className="group bg-ableton-panel rounded p-3 border border-ableton-border hover:border-ableton-accent/50 transition-colors">
                     <div onClick={() => loadTemplate(t)} className="cursor-pointer">
-                      <h4 className="text-sm font-semibold text-ableton-text group-hover:text-ableton-accent transition-colors">{t.name}</h4>
+                      <div className="flex justify-between items-start">
+                         <h4 className="text-sm font-semibold text-ableton-text group-hover:text-ableton-accent transition-colors truncate pr-2">{t.name}</h4>
+                         {t.category && <span className="text-[9px] uppercase tracking-wider bg-ableton-base px-1.5 py-0.5 rounded text-ableton-muted border border-ableton-border">{t.category}</span>}
+                      </div>
                       <p className="text-[10px] text-ableton-muted mt-1">{new Date(t.createdAt).toLocaleDateString()}</p>
                     </div>
                     <div className="flex justify-end mt-2 pt-2 border-t border-white/5">
@@ -413,18 +496,38 @@ const App: React.FC = () => {
         <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
            {/* Suggestions Grid (only if no response yet) */}
            {!response && !isGenerating && !responseImage && (
-             <div className="max-w-4xl mx-auto">
-                <p className="text-center text-ableton-muted mb-6 uppercase tracking-widest text-xs">Quick Start Recipes</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {suggestions.map((s, i) => (
-                    <button 
-                      key={i} 
-                      onClick={() => { setPrompt(s); handleGenerate(s); }}
-                      className="text-left p-4 bg-ableton-panel border border-ableton-border hover:border-ableton-accent/50 hover:bg-ableton-surface transition-all rounded-sm text-sm text-ableton-text shadow-sm"
-                    >
-                      {s}
-                    </button>
-                  ))}
+             <div className="max-w-4xl mx-auto space-y-8">
+                
+                {/* Techno Section */}
+                <div>
+                  <p className="text-center text-ableton-muted mb-4 uppercase tracking-widest text-xs font-bold">Techno Styles</p>
+                  <div className="flex flex-wrap justify-center gap-3">
+                    {technoGenres.map((g, i) => (
+                      <button 
+                        key={i} 
+                        onClick={() => { setPrompt(g.prompt); handleGenerate(g.prompt); }}
+                        className="px-4 py-3 bg-ableton-panel border border-ableton-border hover:border-ableton-accent hover:bg-ableton-surface transition-all rounded-sm text-sm text-ableton-text shadow-sm"
+                      >
+                        {g.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* General Suggestions */}
+                <div>
+                   <p className="text-center text-ableton-muted mb-4 uppercase tracking-widest text-xs font-bold">Live 12 Features & Workflows</p>
+                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {quickTips.map((s, i) => (
+                      <button 
+                        key={i} 
+                        onClick={() => { setPrompt(s); handleGenerate(s); }}
+                        className="text-left p-4 bg-ableton-panel border border-ableton-border hover:border-ableton-accent/50 hover:bg-ableton-surface transition-all rounded-sm text-sm text-ableton-text shadow-sm opacity-80 hover:opacity-100"
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
                 </div>
              </div>
            )}
@@ -432,8 +535,20 @@ const App: React.FC = () => {
            <div className="max-w-4xl mx-auto relative">
              {/* Action Toolbar */}
              {response && !isGenerating && (
-                 <div className="flex justify-end mb-2">
-                    <Button variant="secondary" onClick={() => setShowSaveModal(true)} className="flex items-center gap-2 text-xs">
+                 <div className="flex justify-end mb-2 gap-2">
+                    <Button variant="secondary" onClick={handleCopy} className="flex items-center gap-2 text-xs">
+                        {copied ? (
+                             <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                        ) : (
+                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                        )}
+                        {copied ? 'Copied' : 'Copy'}
+                    </Button>
+                    <Button variant="secondary" onClick={handleExport} className="flex items-center gap-2 text-xs">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                        Export
+                    </Button>
+                    <Button variant="secondary" onClick={openSaveModal} className="flex items-center gap-2 text-xs">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
                         Save as Template
                     </Button>
@@ -479,7 +594,7 @@ const App: React.FC = () => {
                         className="hidden" 
                     />
                     <Button variant="icon" onClick={() => fileInputRef.current?.click()} title="Upload Image">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                     </Button>
                     
                     {/* Microphone Button */}
