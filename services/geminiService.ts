@@ -13,7 +13,9 @@ Key Guidelines:
 3. **Structure**:
    - **Concept**: Brief explanation of the sound/technique.
    - **Core Devices**: List of devices needed.
+   - **MIDI Enhancements**: Suggest 1-2 MIDI effects (Arpeggiator, Chord, Scale, Note Echo) to drive the sound musically.
    - **Step-by-Step Guide**: Numbered list of actions.
+   - **Visual Feedback**: Explain how to use devices like **LFO** (visualize modulation), **Shaper**, **Spectrum**, or **Spectral Resonator** to visually monitor the signal. Describe what to look for (e.g. "Watch the harmonic peaks shift").
    - **Macro Mapping**: Suggest 4-8 useful macros for a Rack.
 4. **REX/Slicing Specialization**: If the user mentions "Rex", "REX files", "loop slicing", or "breakbeats":
    - Explicitly explain how to use **Simpler** in 'Slice' mode.

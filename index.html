@@ -11,12 +11,14 @@
           extend: {
             colors: {
               ableton: {
-                dark: '#1e1e1e',
-                mid: '#282828',
-                light: '#363636',
-                accent: '#ff764d', // Live 12 Orange-ish
-                text: '#d9d9d9',
-                panel: '#424242',
+                base: 'var(--color-base)',       // Main background
+                surface: 'var(--color-surface)', // Sidebar/Header
+                panel: 'var(--color-panel)',     // Panels/Inputs
+                border: 'var(--color-border)',   // Borders
+                text: 'var(--color-text)',       // Main text
+                muted: 'var(--color-muted)',     // Secondary text
+                accent: 'var(--color-accent)',   // Brand orange
+                'accent-hover': 'var(--color-accent-hover)',
                 yellow: '#ffcc00'
               }
             },
@@ -29,17 +31,41 @@
       }
     </script>
     <style>
-      body {
-        background-color: #1e1e1e;
-        color: #d9d9d9;
+      :root {
+        --color-base: #1a1a1a;
+        --color-surface: #222222;
+        --color-panel: #2a2a2a;
+        --color-border: #333333;
+        --color-text: #d9d9d9;
+        --color-muted: #9ca3af;
+        --color-accent: #ff764d;
+        --color-accent-hover: #ff8f6b;
       }
+      
+      [data-theme="light"] {
+        --color-base: #f3f3f3;
+        --color-surface: #e6e6e6;
+        --color-panel: #dcdcdc;
+        --color-border: #b4b4b4;
+        --color-text: #1a1a1a;
+        --color-muted: #555555;
+        --color-accent: #ff764d;
+        --color-accent-hover: #ff5f30;
+      }
+
+      body {
+        background-color: var(--color-base);
+        color: var(--color-text);
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+      
       /* Custom Scrollbar */
       ::-webkit-scrollbar {
         width: 8px;
         height: 8px;
       }
       ::-webkit-scrollbar-track {
-        background: #282828;
+        background: var(--color-surface);
       }
       ::-webkit-scrollbar-thumb {
         background: #555;

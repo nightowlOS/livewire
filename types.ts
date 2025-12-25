@@ -19,3 +19,13 @@ export enum SoundCategory {
   FX = 'FX',
   GLITCH = 'Glitch'
 }
+
+export type Theme = 'dark' | 'light';
+
+export interface SavedTemplate {
+  id: string;
+  name: string;
+  content: string;
+  category?: string;
+  createdAt: number;
+}
