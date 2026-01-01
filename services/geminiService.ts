@@ -34,13 +34,18 @@ Key Guidelines:
    - If remixing or isolation is mentioned: Explain the Live 12 **Stem Separation** feature (Right-click audio clip > Split > Select Vocals/Drums/Bass/Other).
    - Warning: "Expect some artifacts; use EQ Eight to clean up the crossover points."
 
-7. **Live 12 MIDI Tools & Generative Features**: 
-   - When asked about MIDI Tools, adhere to the "MIDI Complexity" and "MIDI Musicality" constraints.
-   - **Generators**: Mention *Rhythm*, *Seed*, *Shape* in the MIDI Clip view.
-   - **Transformations**: Mention *Arpeggiate*, *Connect*, *Ornament* tabs in the Clip View for generative variations.
-   - **Scale Awareness**: Mention how to enable Scale Mode to keep random generation musical.
-   - If **Musicality** is High (8-10): Emphasize the 'Scale Awareness' toggle and specific key choices.
-   - If **Complexity** is High (8-10): Suggest using *Stacks*, *Velocity Randomization*, and polyrhythmic *Rhythm* generator settings.
+7. **Live 12 MIDI Tools & Generative Features (Advanced)**: 
+   - **General**: Mention *Rhythm*, *Seed*, *Shape* in the MIDI Clip view.
+   - **For Dark Techno Bass**: 
+     - Suggest using **Rhythm** with low density and strict quantization (1/16 notes).
+     - Use **Shape** to apply a downward velocity ramp to create a pumping feel.
+     - Enable **Scale Awareness** (Phrygian or Minor scale) to keep random notes strictly dark and moody.
+   - **For Atmospheric Pads**:
+     - Suggest using **Seed** with high density and wide pitch range.
+     - Use **Connect** (Transformation tool) to bridge gaps between chords.
+     - Use **Ornament** to add subtle grace notes (flams) for texture.
+     - Suggest "Strum" (new Live 12 feature) to humanize the chord onset.
+   - **Complexity Control**: If complexity is High (8-10), suggest using *Stacks* in the Pitch tool and polyrhythmic settings in the *Rhythm* generator.
 
 8. **New Live 12 Features**: 
    - **Meld**: Explain its bi-timbral architecture (Engine A/B). For textures, recommend *Granular* or *Raindrop* oscillators. Highlight the deep modulation matrix.

@@ -5,22 +5,22 @@ import { OutputDisplay } from './components/OutputDisplay';
 import { Switch } from './components/Switch';
 import { ChatMessage, Theme, SavedTemplate, UserPreferences, CustomTheme } from './types';
 
-// Icons
-const HistoryIcon = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
-const TemplateIcon = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg>;
-const ConfigIcon = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
-const SendIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>;
-const MicIcon = ({ active }: { active: boolean }) => <svg className={`w-5 h-5 ${active ? 'animate-pulse text-red-500' : ''}`} fill={active ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>;
-const ImageIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2-2H6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>;
-
 const App: React.FC = () => {
   const [prompt, setPrompt] = useState('');
   const [lastPrompt, setLastPrompt] = useState(''); 
   const [isGenerating, setIsGenerating] = useState(false);
   const [response, setResponse] = useState('');
   const [responseImage, setResponseImage] = useState<string | undefined>(undefined);
+  
+  // History & Undo/Redo
   const [history, setHistory] = useState<ChatMessage[]>([]);
+  const [redoStack, setRedoStack] = useState<ChatMessage[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  
+  // Export State
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'md' | 'txt' | 'html' | 'docx' | 'pdf'>('md');
+  const [exportThemeId, setExportThemeId] = useState<string>('dark');
   
   // Feature states
   const [theme, setTheme] = useState<Theme>(() => {
@@ -36,6 +36,14 @@ const App: React.FC = () => {
     } catch(e) { return [] }
   });
   
+  // MIDI Tool State
+  const [midiTarget, setMidiTarget] = useState<'general' | 'techno_bass' | 'atmos_pad' | 'glitch_drums'>('general');
+  
+  // Arrangement Tool State
+  const [arrangeGenre, setArrangeGenre] = useState('Techno');
+  const [arrangeEnergy, setArrangeEnergy] = useState('Peak Time');
+
+  // Theme Creator
   const [isCreatingTheme, setIsCreatingTheme] = useState(false);
   const [newThemeDraft, setNewThemeDraft] = useState<CustomTheme['colors']>({
       base: '#1a1a1a',
@@ -48,10 +56,16 @@ const App: React.FC = () => {
   });
   const [newThemeName, setNewThemeName] = useState('');
 
-  const [activeTab, setActiveTab] = useState<'history' | 'templates' | 'config'>('history');
+  // Tabs now include 'tools' for MIDI
+  const [activeTab, setActiveTab] = useState<'history' | 'templates' | 'tools' | 'settings'>('history');
+  
+  // Help Modal
   const [showHelp, setShowHelp] = useState(false);
+  const [helpTab, setHelpTab] = useState<'guide' | 'shortcuts'>('guide');
+
   const [copied, setCopied] = useState(false);
   
+  // Preferences
   const [preferences, setPreferences] = useState<UserPreferences>({
       detailLevel: 'intermediate',
       deviceSuite: 'stock',
@@ -73,38 +87,35 @@ const App: React.FC = () => {
       includeTroubleshooting: false
   });
 
+  // Templates
   const [templates, setTemplates] = useState<SavedTemplate[]>(() => {
     try {
       const saved = localStorage.getItem('ableton-templates');
       return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
-    }
+    } catch (e) { return []; }
   });
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState('');
   const [newTemplateContent, setNewTemplateContent] = useState('');
   const [newTemplateCategory, setNewTemplateCategory] = useState('Workflow');
 
+  // Media
   const [isRecording, setIsRecording] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null); 
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const sessionInputRef = useRef<HTMLInputElement>(null);
 
-  // Auto scroll
-  useEffect(() => {
-    if (response && bottomRef.current) {
-        bottomRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [response]);
-
+  // Apply theme
   useEffect(() => {
     if (theme === 'custom') {
-       // Logic to re-apply custom theme active logic could go here
+       // logic handled by applyCustomTheme usually, but needing re-application on load would go here
+       // In a real app we'd verify the custom theme is active and re-apply colors
+       const activeCustom = customThemes.find(c => c.id === exportThemeId) || customThemes[0];
+       if(activeCustom) applyCustomTheme(activeCustom);
     } else {
         document.documentElement.setAttribute('data-theme', theme);
         document.documentElement.style.removeProperty('--color-base');
@@ -116,18 +127,21 @@ const App: React.FC = () => {
         document.documentElement.style.removeProperty('--color-accent');
     }
     localStorage.setItem('ableton-theme', theme);
+    setExportThemeId(theme === 'custom' ? (customThemes[0]?.id || 'dark') : theme);
   }, [theme]);
 
   const applyCustomTheme = (customTheme: CustomTheme) => {
     setTheme('custom');
     document.documentElement.removeAttribute('data-theme');
-    document.documentElement.style.setProperty('--color-base', customTheme.colors.base);
-    document.documentElement.style.setProperty('--color-surface', customTheme.colors.surface);
-    document.documentElement.style.setProperty('--color-panel', customTheme.colors.panel);
-    document.documentElement.style.setProperty('--color-border', customTheme.colors.border);
-    document.documentElement.style.setProperty('--color-text', customTheme.colors.text);
-    document.documentElement.style.setProperty('--color-muted', customTheme.colors.muted);
-    document.documentElement.style.setProperty('--color-accent', customTheme.colors.accent);
+    const c = customTheme.colors;
+    const style = document.documentElement.style;
+    style.setProperty('--color-base', c.base);
+    style.setProperty('--color-surface', c.surface);
+    style.setProperty('--color-panel', c.panel);
+    style.setProperty('--color-border', c.border);
+    style.setProperty('--color-text', c.text);
+    style.setProperty('--color-muted', c.muted);
+    style.setProperty('--color-accent', c.accent);
   };
 
   const saveCustomTheme = () => {
@@ -145,23 +159,108 @@ const App: React.FC = () => {
     setNewThemeName('');
   };
 
+  // Persist Templates
   useEffect(() => {
     localStorage.setItem('ableton-templates', JSON.stringify(templates));
   }, [templates]);
 
+  // Session Management
+  const handleUndo = () => {
+      // Logic: History is [newest, ..., oldest]. Turn is usually User -> Model (2 items)
+      if (history.length < 2) return;
+      const newHistory = [...history];
+      const modelMsg = newHistory.shift();
+      const userMsg = newHistory.shift();
+      
+      if (modelMsg && userMsg) {
+          setRedoStack(prev => [modelMsg, userMsg, ...prev]);
+          setHistory(newHistory);
+          if (history.length === 2) { 
+              // If we undo the last item, clear response display
+              setResponse('');
+              setResponseImage(undefined);
+          } else {
+              // Show previous model response
+              const prevModel = newHistory[0];
+              if (prevModel && prevModel.role === 'model') {
+                  setResponse(prevModel.text);
+                  setResponseImage(prevModel.imageUrl);
+              }
+          }
+          // Restore prompt
+          setPrompt(userMsg.text);
+      }
+  };
+
+  const handleRedo = () => {
+      if (redoStack.length < 2) return;
+      const newRedo = [...redoStack];
+      const modelMsg = newRedo.shift();
+      const userMsg = newRedo.shift();
+
+      if (modelMsg && userMsg) {
+          setHistory(prev => [modelMsg, userMsg, ...prev]);
+          setRedoStack(newRedo);
+          setResponse(modelMsg.text);
+          setResponseImage(modelMsg.imageUrl);
+      }
+  };
+
+  const handleSaveSession = () => {
+      const sessionData = {
+          date: new Date().toISOString(),
+          history,
+          preferences,
+          templates,
+          theme,
+          customThemes
+      };
+      const blob = new Blob([JSON.stringify(sessionData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `livewire-session-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+  };
+
+  const handleLoadSession = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+          try {
+              const data = JSON.parse(ev.target?.result as string);
+              if (data.history) setHistory(data.history);
+              if (data.preferences) setPreferences(data.preferences);
+              if (data.templates) setTemplates(data.templates);
+              if (data.theme) setTheme(data.theme);
+              if (data.customThemes) setCustomThemes(data.customThemes);
+              alert("Session loaded successfully!");
+          } catch (err) {
+              console.error(err);
+              alert("Failed to load session. Invalid file.");
+          }
+      };
+      reader.readAsText(file);
+  };
+
+  // Workflows
   const technoWorkflows = [
-    { label: "Kick Rumble", icon: "🥁", prompt: "Create a detailed chain for a Techno Rumble Kick using Hybrid Reverb and Roar. Explain macro mappings for decay and distortion." },
-    { label: "Polymetric Seq", icon: "🎼", prompt: "Explain how to set up a polymetric techno sequence using the new Live 12 MIDI Tools, mixing 4/4 kicks with 3/16 synth lines." },
-    { label: "Dub Chords", icon: "🎹", prompt: "Design a classic Dub Techno chord rack using Analog, Echo, and Auto Filter. Focus on texture and feedback loops." },
-    { label: "Indus. Distortion", icon: "🏭", prompt: "Create an industrial techno drum bus processing chain using Roar in Multiband mode and Drum Buss." },
-    { label: "Hypnotic Bleeps", icon: "🌀", prompt: "Show me a workflow to generate hypnotic, evolving bleep loops using Note Echo, Random, and Scale Awareness." },
-    { label: "Hardgroove", icon: "🔥", prompt: "Create a processing chain for 90s Hardgroove loops using Vocoder (noise mode) and Overdrive to add texture." }
+    { label: "Kick Rumble Generator", prompt: "Create a detailed chain for a Techno Rumble Kick using Hybrid Reverb and Roar. Explain macro mappings for decay and distortion." },
+    { label: "Polymetric Sequencer", prompt: "Explain how to set up a polymetric techno sequence using the new Live 12 MIDI Tools, mixing 4/4 kicks with 3/16 synth lines." },
+    { label: "Dub Techno Chord Rack", prompt: "Design a classic Dub Techno chord rack using Analog, Echo, and Auto Filter. Focus on texture and feedback loops." },
+    { label: "Industrial Distortion Bus", prompt: "Create an industrial techno drum bus processing chain using Roar in Multiband mode and Drum Buss." },
+    { label: "Hypnotic Bleep Loop", prompt: "Show me a workflow to generate hypnotic, evolving bleep loops using Note Echo, Random, and Scale Awareness." },
+    { label: "Hardgroove Percussion", prompt: "Create a processing chain for 90s Hardgroove loops using Vocoder (noise mode) and Overdrive to add texture." }
   ];
 
   const advancedWorkflows = [
-    { label: "REX Slicing", icon: "✂️", prompt: "Explain how to use 'Slice to New MIDI Track' to recreate the REX file workflow. Discuss preserving transients in Simpler." },
-    { label: "Stem Remixing", icon: "🎤", prompt: "Provide a step-by-step guide on using Ableton Live 12's Stem Separation feature to isolate vocals, drums, bass, or other instruments from an audio clip. Include tips for cleaning up artifacts." },
-    { label: "Generative MIDI", icon: "🤖", prompt: "Explain how to use Ableton Live 12's new MIDI Clip view features like 'Seed', 'Rhythm', and 'Shape' to generate melodic patterns. Also, detail how to use 'Scale Awareness' for musical results." }
+    { label: "REX & Slicing Masterclass", prompt: "Explain how to use 'Slice to New MIDI Track' to recreate the REX file workflow. Discuss preserving transients in Simpler." },
+    { label: "Stem Separation Remixing", prompt: "Provide a step-by-step guide on using Ableton Live 12's Stem Separation feature to isolate vocals, drums, bass, or other instruments from an audio clip. Include tips for cleaning up artifacts." },
+    { label: "Generative MIDI Tools", prompt: "Explain how to use Ableton Live 12's new MIDI Clip view features like 'Seed', 'Rhythm', and 'Shape' to generate melodic patterns. Also, detail how to use 'Scale Awareness' for musical results." }
   ];
 
   const applyConfigPreset = (preset: string) => {
@@ -216,9 +315,35 @@ const App: React.FC = () => {
     }
   };
 
+  const getSmartSuggestions = (currentPrompt: string) => {
+      const p = currentPrompt.toLowerCase();
+      const suggestions = [];
+
+      if (p.includes('bass') || p.includes('rumble') || p.includes('kick')) {
+          suggestions.push("Add Sidechain Compression");
+          suggestions.push("Create Sub-Bass Layer");
+          suggestions.push("Apply Saturation (Roar)");
+      } else if (p.includes('pad') || p.includes('ambient') || p.includes('atmosphere')) {
+          suggestions.push("Add Shimmer Reverb");
+          suggestions.push("Modulate with LFO");
+          suggestions.push("Layer with Granular Texture");
+      } else if (p.includes('drum') || p.includes('percussion') || p.includes('beat')) {
+          suggestions.push("Apply Parallel Compression");
+          suggestions.push("Add Swing/Groove");
+          suggestions.push("Process with Drum Buss");
+      } else {
+          suggestions.push("Explain the Signal Flow");
+          suggestions.push("Suggest Macro Mappings");
+          suggestions.push("Create Audio Effect Rack");
+      }
+      return suggestions;
+  };
+
   const handleGenerate = async (textToUse?: string, modifier?: string) => {
     const activePrompt = textToUse || prompt;
     if (!activePrompt.trim() && !selectedImage) return;
+
+    setRedoStack([]); // Clear redo on new action
 
     let tempPrefs = { ...preferences };
     let extraInstruction = "";
@@ -244,7 +369,9 @@ const App: React.FC = () => {
     setLastPrompt(activePrompt);
 
     const contextPrompt = `${activePrompt} 
+    
     ${extraInstruction ? `[IMPORTANT MODIFICATION]: ${extraInstruction}` : ''}
+
     [Configuration Constraints]:
     - Expertise Level: ${tempPrefs.detailLevel}
     - OS for Shortcuts: ${tempPrefs.os === 'mac' ? 'macOS (Cmd, Opt)' : 'Windows (Ctrl, Alt)'}
@@ -259,10 +386,12 @@ const App: React.FC = () => {
     - Creativity Mode: ${tempPrefs.creativity === 'experimental' ? 'Suggest unconventional signal routing and weird sound design tricks.' : 'Stick to standard, reliable industry techniques.'}
     - Show Shortcuts: ${tempPrefs.showShortcuts ? 'Yes' : 'No'}
     - Troubleshooting: ${tempPrefs.includeTroubleshooting ? 'Include common pitfalls' : 'No'}
+    
     [Style Fine-Tuning (1-10)]:
     - Sentence Complexity: ${tempPrefs.sentenceComplexity}/10
     - Technical Jargon: ${tempPrefs.jargonLevel}/10
     - Device Explanation Depth: ${tempPrefs.deviceExplanationDepth}/10
+    
     [MIDI Generation Settings (1-10)]:
     - MIDI Pattern Complexity: ${tempPrefs.midiComplexity}/10
     - MIDI Musicality/Scale Adherence: ${tempPrefs.midiMusicality}/10
@@ -282,20 +411,38 @@ const App: React.FC = () => {
         const newImageBase64 = await editImage(selectedImage, contextPrompt);
         setResponseImage(newImageBase64);
         setResponse("Here is your edited image based on the prompt.");
-        setHistory(prev => [{ id: (Date.now() + 1).toString(), role: 'model', text: "Here is your edited image based on the prompt.", imageUrl: newImageBase64, timestamp: Date.now() }, ...prev]);
+
+        const modelMsg: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            role: 'model',
+            text: "Here is your edited image based on the prompt.",
+            imageUrl: newImageBase64,
+            timestamp: Date.now()
+        };
+        setHistory(prev => [modelMsg, ...prev]);
+
       } else {
         let accumulatedResponse = "";
         await generateAbletonGuideStream(contextPrompt, selectedImage, (chunk) => {
           accumulatedResponse += chunk;
           setResponse(accumulatedResponse);
         });
-        setHistory(prev => [{ id: (Date.now() + 1).toString(), role: 'model', text: accumulatedResponse, timestamp: Date.now() }, ...prev]);
+        
+        const modelMsg: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          role: 'model',
+          text: accumulatedResponse,
+          timestamp: Date.now()
+        };
+        setHistory(prev => [modelMsg, ...prev]);
       }
+      
       setPrompt('');
       if (!modifier) {
           setSelectedImage(null);
           setIsEditMode(false);
       }
+
     } catch (error) {
       console.error("Failed to generate", error);
       setResponse("**Error:** Failed to process request. Please check your connection or API key.");
@@ -334,6 +481,7 @@ const App: React.FC = () => {
         };
         stream.getTracks().forEach(track => track.stop());
       };
+
       mediaRecorder.start();
       setIsRecording(true);
     } catch (err) {
@@ -408,20 +556,95 @@ const App: React.FC = () => {
   const loadTemplate = (template: SavedTemplate) => {
     setResponse(template.content);
     setResponseImage(undefined);
-    setShowHistory(false);
+    setShowHistory(false); 
   };
 
-  const handleExport = () => {
-    if (!response) return;
-    const blob = new Blob([response], { type: 'text/markdown' });
+  // Export Logic
+  const standardThemeColors: Record<string, any> = {
+      dark: { base: '#1a1a1a', text: '#d9d9d9', accent: '#ff764d', surface: '#222222' },
+      light: { base: '#f3f3f3', text: '#1a1a1a', accent: '#ff764d', surface: '#e6e6e6' },
+      live9: { base: '#dcdcdc', text: '#111111', accent: '#00a0ff', surface: '#c0c0c0' },
+      vaporwave: { base: '#180d26', text: '#ff99e6', accent: '#00f2ff', surface: '#24123b' },
+      matrix: { base: '#000000', text: '#00ff00', accent: '#00ff00', surface: '#0a0a0a' },
+      rust: { base: '#1c1917', text: '#e7e5e4', accent: '#ea580c', surface: '#292524' },
+      ocean: { base: '#0f172a', text: '#e2e8f0', accent: '#38bdf8', surface: '#1e293b' },
+  };
+
+  const simpleMarkdownToHtml = (md: string) => {
+      let html = md
+        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+        .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/gim, '<em>$1</em>')
+        .replace(/^> (.*$)/gim, '<blockquote>$1</blockquote>')
+        .replace(/`(.*?)`/gim, '<code>$1</code>')
+        .replace(/\n/gim, '<br />');
+      return html;
+  };
+
+  const performExport = () => {
+    let content = response;
+    let mimeType = 'text/markdown';
+    let extension = 'md';
+    let colors = standardThemeColors[exportThemeId];
+    if (!colors) {
+        const custom = customThemes.find(c => c.id === exportThemeId);
+        if (custom) colors = custom.colors;
+        else colors = standardThemeColors['dark'];
+    }
+
+    if (exportFormat === 'txt') {
+        mimeType = 'text/plain';
+        extension = 'txt';
+        content = content.replace(/\*\*/g, '').replace(/###/g, '').replace(/##/g, '').replace(/`/g, '');
+    } else if (['html', 'pdf', 'docx'].includes(exportFormat)) {
+        const htmlBody = simpleMarkdownToHtml(response);
+        const fullHtml = `<!DOCTYPE html><html><head><style>
+            body { background: ${colors.base}; color: ${colors.text}; font-family: sans-serif; padding: 3rem; max-width: 800px; margin: 0 auto; line-height: 1.6; }
+            h1, h2, h3 { color: ${colors.accent}; margin-top: 2rem; border-bottom: 1px solid ${colors.surface}; padding-bottom: 0.5rem; }
+            code { background: ${colors.surface}; color: ${colors.accent}; padding: 2px 5px; border-radius: 4px; font-family: monospace; }
+            strong { color: ${colors.text}; font-weight: 800; }
+            em { color: ${colors.accent}; font-style: italic; }
+            blockquote { border-left: 4px solid ${colors.accent}; margin: 1.5rem 0; padding-left: 1rem; font-style: italic; opacity: 0.8; }
+        </style></head><body>${htmlBody}</body></html>`;
+        
+        content = fullHtml;
+
+        if (exportFormat === 'html') {
+            mimeType = 'text/html';
+            extension = 'html';
+        } else if (exportFormat === 'docx') {
+             mimeType = 'application/vnd.ms-word';
+             extension = 'doc'; 
+        } else if (exportFormat === 'pdf') {
+             const printWindow = window.open('', '_blank', 'width=800,height=900');
+             if (printWindow) {
+                 printWindow.document.write(content);
+                 printWindow.document.close();
+                 printWindow.focus();
+                 setTimeout(() => {
+                     printWindow.print();
+                     printWindow.close();
+                 }, 500);
+             } else {
+                 alert("Please allow popups to print to PDF.");
+             }
+             setShowExportModal(false);
+             return;
+        }
+    }
+    
+    const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `ableton-guide-${new Date().toISOString().slice(0, 10)}.md`;
+    a.download = `ableton-guide-${new Date().toISOString().slice(0, 10)}.${extension}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    setShowExportModal(false);
   };
 
   const handleCopy = async () => {
@@ -430,9 +653,7 @@ const App: React.FC = () => {
         await navigator.clipboard.writeText(response);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-        console.error('Failed to copy:', err);
-    }
+    } catch (err) { console.error('Failed to copy:', err); }
   };
 
   const availableThemes: {id: Theme, name: string, color: string}[] = [
@@ -445,57 +666,128 @@ const App: React.FC = () => {
       { id: 'ocean', name: 'Deep Ocean', color: '#0f172a' },
   ];
 
-  const SidebarTabButton = ({ id, icon: Icon, label }: { id: typeof activeTab, icon: React.FC<any>, label: string }) => (
-    <button 
-      onClick={() => setActiveTab(id)}
-      className={`flex-1 py-4 flex flex-col items-center justify-center gap-1 transition-all duration-200 border-b-2 ${activeTab === id ? 'border-ableton-accent text-ableton-text bg-ableton-panel/50' : 'border-transparent text-ableton-muted hover:text-ableton-text hover:bg-ableton-panel/30'}`}
-    >
-        <Icon />
-        <span className="text-[10px] uppercase font-bold tracking-wider">{label}</span>
-    </button>
-  );
-
   return (
-    <div className="h-screen bg-ableton-base text-ableton-text font-sans flex flex-col md:flex-row overflow-hidden transition-colors duration-300">
+    <div className="min-h-screen bg-ableton-base text-ableton-text font-sans selection:bg-ableton-accent selection:text-white flex flex-col md:flex-row overflow-hidden transition-colors duration-300">
       
       {/* Help Modal */}
       {showHelp && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-           <div className="bg-ableton-surface border border-ableton-border shadow-2xl rounded-xl max-w-lg w-full p-6 relative">
-              <button onClick={() => setShowHelp(false)} className="absolute top-4 right-4 text-ableton-muted hover:text-ableton-text">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-              <h2 className="text-xl font-bold text-ableton-accent mb-4">LiveWire Assistant Guide</h2>
-              <div className="space-y-3 text-sm text-ableton-text">
-                <p><strong>1. Prompting:</strong> Describe a sound or workflow. Use the "Quick Workflows" for instant results.</p>
-                <p><strong>2. Audio/Image:</strong> Use the mic to ask questions or upload a screenshot of a device to get an explanation.</p>
-                <p><strong>3. Config:</strong> Tune the AI's personality in the Config tab. Use "The Purist" for strict manuals.</p>
-                <p><strong>4. Templates:</strong> Save useful responses to build your own library of techniques.</p>
+           <div className="bg-ableton-surface border border-ableton-border shadow-2xl rounded-lg max-w-lg w-full p-0 flex flex-col relative overflow-hidden">
+              <div className="p-4 border-b border-ableton-border bg-ableton-panel flex justify-between items-center">
+                 <h2 className="text-lg font-bold text-ableton-text">LiveWire Help</h2>
+                 <button onClick={() => setShowHelp(false)} className="text-ableton-muted hover:text-ableton-text">
+                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                 </button>
+              </div>
+              
+              <div className="flex border-b border-ableton-border">
+                  <button onClick={() => setHelpTab('guide')} className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider ${helpTab === 'guide' ? 'bg-ableton-base text-ableton-accent border-b-2 border-ableton-accent' : 'bg-ableton-panel text-ableton-muted'}`}>Guide</button>
+                  <button onClick={() => setHelpTab('shortcuts')} className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider ${helpTab === 'shortcuts' ? 'bg-ableton-base text-ableton-accent border-b-2 border-ableton-accent' : 'bg-ableton-panel text-ableton-muted'}`}>Shortcuts</button>
+              </div>
+
+              <div className="p-6 h-80 overflow-y-auto">
+                 {helpTab === 'guide' && (
+                     <div className="space-y-4 text-sm text-ableton-text">
+                        <p><strong>1. Text Prompts:</strong> Ask for sound design recipes (e.g., "Create a dubstep wobble bass").</p>
+                        <p><strong>2. Audio Input:</strong> Click the mic to speak your request or record a sound to describe.</p>
+                        <p><strong>3. Image Analysis:</strong> Upload a screenshot of a plugin or VST and ask "What is this setting?"</p>
+                        <p><strong>4. Image Editing:</strong> Upload an image, check "Edit Mode", and prompt to modify it.</p>
+                        <p><strong>5. Tools & Config:</strong> Use the sidebar to access MIDI Tools or configure the AI's personality.</p>
+                     </div>
+                 )}
+                 {helpTab === 'shortcuts' && (
+                     <div className="space-y-2 text-sm">
+                         <div className="flex justify-between border-b border-ableton-border pb-1"><span>Submit Prompt</span><code className="text-ableton-accent">Enter</code></div>
+                         <div className="flex justify-between border-b border-ableton-border pb-1"><span>New Line</span><code className="text-ableton-accent">Shift + Enter</code></div>
+                         <div className="flex justify-between border-b border-ableton-border pb-1"><span>Toggle Sidebar</span><code className="text-ableton-accent">Ctrl/Cmd + B</code></div>
+                         <div className="flex justify-between border-b border-ableton-border pb-1"><span>Save Session</span><code className="text-ableton-accent">Ctrl/Cmd + S</code></div>
+                     </div>
+                 )}
               </div>
            </div>
         </div>
       )}
 
-      {/* Save Modal */}
+      {/* Export Modal */}
+      {showExportModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+           <div className="bg-ableton-surface border border-ableton-border shadow-2xl rounded-lg max-w-md w-full p-6 flex flex-col">
+              <h3 className="text-lg font-bold text-ableton-text mb-4">Export Guide</h3>
+              <div className="space-y-4 mb-6">
+                 <div className="space-y-2">
+                    <label className="text-xs text-ableton-muted uppercase tracking-wider font-bold">Format</label>
+                    <div className="grid grid-cols-2 gap-2">
+                        {['md', 'txt', 'html', 'docx', 'pdf'].map(fmt => (
+                            <button
+                                key={fmt}
+                                onClick={() => setExportFormat(fmt as any)}
+                                className={`text-sm py-2 px-3 rounded border transition-colors uppercase font-bold tracking-wide ${exportFormat === fmt ? 'bg-ableton-accent text-white border-ableton-accent' : 'bg-ableton-base text-ableton-muted border-ableton-border hover:border-ableton-accent'}`}
+                            >
+                                {fmt}
+                            </button>
+                        ))}
+                    </div>
+                 </div>
+                 <div className="space-y-2">
+                    <label className="text-xs text-ableton-muted uppercase tracking-wider font-bold">Export Theme</label>
+                    <select 
+                       value={exportThemeId}
+                       onChange={(e) => setExportThemeId(e.target.value)}
+                       className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-sm text-ableton-text focus:outline-none focus:border-ableton-accent"
+                    >
+                       {availableThemes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                       {customThemes.map(t => <option key={t.id} value={t.id}>{t.name} (Custom)</option>)}
+                    </select>
+                 </div>
+              </div>
+              <div className="flex justify-end gap-3">
+                <Button variant="secondary" onClick={() => setShowExportModal(false)}>Cancel</Button>
+                <Button onClick={performExport}>Download</Button>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* Save Template Modal */}
       {showSaveModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-           <div className="bg-ableton-surface border border-ableton-border shadow-2xl rounded-xl max-w-2xl w-full p-6 flex flex-col max-h-[90vh]">
+           <div className="bg-ableton-surface border border-ableton-border shadow-2xl rounded-lg max-w-2xl w-full p-6 flex flex-col max-h-[90vh]">
               <h3 className="text-lg font-bold text-ableton-text mb-4">Save Template</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div className="space-y-1">
                       <label className="text-xs text-ableton-muted uppercase tracking-wider font-bold">Template Name</label>
-                      <input type="text" autoFocus value={newTemplateName} onChange={(e) => setNewTemplateName(e.target.value)} className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-ableton-text focus:border-ableton-accent outline-none" placeholder="e.g. Techno Rumble" />
+                      <input 
+                        type="text" 
+                        autoFocus
+                        placeholder="e.g. Techno Rumble Chain" 
+                        value={newTemplateName}
+                        onChange={(e) => setNewTemplateName(e.target.value)}
+                        className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-ableton-text focus:outline-none focus:border-ableton-accent"
+                      />
                   </div>
                   <div className="space-y-1">
                       <label className="text-xs text-ableton-muted uppercase tracking-wider font-bold">Category</label>
-                      <select value={newTemplateCategory} onChange={(e) => setNewTemplateCategory(e.target.value)} className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-ableton-text focus:border-ableton-accent outline-none">
+                      <select 
+                        value={newTemplateCategory}
+                        onChange={(e) => setNewTemplateCategory(e.target.value)}
+                        className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-ableton-text focus:outline-none focus:border-ableton-accent"
+                      >
                           <option value="Workflow">Workflow</option>
                           <option value="Effect Rack">Effect Rack</option>
                           <option value="Sound Design">Sound Design</option>
+                          <option value="Project Setup">Project Setup</option>
+                          <option value="Other">Other</option>
                       </select>
                   </div>
               </div>
-              <textarea value={newTemplateContent} onChange={(e) => setNewTemplateContent(e.target.value)} className="flex-1 w-full bg-ableton-base border border-ableton-border rounded p-3 text-ableton-text font-mono text-xs focus:border-ableton-accent outline-none resize-none mb-4 min-h-[200px]" />
+              <div className="flex-1 min-h-[200px] mb-4 flex flex-col space-y-1">
+                 <label className="text-xs text-ableton-muted uppercase tracking-wider font-bold">Template Content (Editable)</label>
+                 <textarea 
+                    value={newTemplateContent}
+                    onChange={(e) => setNewTemplateContent(e.target.value)}
+                    className="flex-1 w-full bg-ableton-base border border-ableton-border rounded p-3 text-ableton-text font-mono text-xs focus:outline-none focus:border-ableton-accent resize-none leading-relaxed"
+                 />
+              </div>
               <div className="flex justify-end gap-3">
                 <Button variant="secondary" onClick={() => setShowSaveModal(false)}>Cancel</Button>
                 <Button onClick={saveTemplate} disabled={!newTemplateName.trim()}>Save Template</Button>
@@ -505,253 +797,392 @@ const App: React.FC = () => {
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-ableton-surface border-r border-ableton-border transform transition-transform duration-300 md:relative md:translate-x-0 ${showHistory ? 'translate-x-0' : '-translate-x-full'} flex flex-col shadow-2xl md:shadow-none`}>
-        <div className="flex bg-ableton-base/50">
-           <SidebarTabButton id="history" icon={HistoryIcon} label="History" />
-           <SidebarTabButton id="templates" icon={TemplateIcon} label="Templates" />
-           <SidebarTabButton id="config" icon={ConfigIcon} label="Config" />
+      <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-ableton-surface border-r border-ableton-border transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${showHistory ? 'translate-x-0' : '-translate-x-full'} flex flex-col`}>
+        {/* Brand Area */}
+        <div className="h-16 flex items-center px-4 border-b border-ableton-border bg-ableton-surface flex-shrink-0">
+             <div className="w-8 h-8 bg-ableton-accent rounded-sm flex items-center justify-center shadow-lg mr-3">
+                <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M6 2v20h2V2H6zm4 0v20h2V2h-2zm4 0v20h2V2h-2zm4 0v20h2V2h-2z"/></svg>
+            </div>
+            <div>
+                 <h1 className="text-lg font-bold tracking-tight text-ableton-text leading-none">LiveWire</h1>
+                 <span className="text-[10px] text-ableton-muted uppercase tracking-wider font-semibold">Ableton Architect</span>
+            </div>
         </div>
 
-        <button onClick={() => setShowHistory(false)} className="md:hidden absolute top-3 right-3 text-ableton-muted p-2 rounded-full hover:bg-ableton-panel">
-           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+        {/* Sidebar Tabs */}
+        <div className="p-0 border-b border-ableton-border grid grid-cols-4 bg-ableton-panel">
+           {['history', 'templates', 'tools', 'settings'].map((tab) => (
+               <button 
+                key={tab}
+                onClick={() => setActiveTab(tab as any)}
+                className={`p-3 flex items-center justify-center transition-colors border-b-2 ${activeTab === tab ? 'bg-ableton-base text-ableton-accent border-ableton-accent' : 'text-ableton-muted border-transparent hover:text-ableton-text'}`}
+                title={tab.charAt(0).toUpperCase() + tab.slice(1)}
+               >
+                 {tab === 'history' && <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+                 {tab === 'templates' && <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>}
+                 {tab === 'tools' && <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 3-2 3-2zm0 0v-8" /></svg>}
+                 {tab === 'settings' && <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
+               </button>
+           ))}
+        </div>
+
+        <button onClick={() => setShowHistory(false)} className="md:hidden absolute top-3 right-3 text-ableton-muted">
+           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
 
-        <div className="flex-1 overflow-y-auto p-3 scrollbar-hide">
+        {/* Tab Content */}
+        <div className="flex-1 overflow-y-auto p-3">
           {activeTab === 'history' && (
              <div className="space-y-2">
                 {history.filter(h => h.role === 'user').map((item) => (
-                  <div key={item.id} onClick={() => loadFromHistory(item)} className="p-3 rounded-lg bg-ableton-panel hover:bg-ableton-border cursor-pointer transition-all border border-transparent hover:border-ableton-accent/30 group">
-                    <div className="flex justify-between items-center mb-1">
-                        <span className="text-[10px] text-ableton-muted font-mono">{new Date(item.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                        {item.imageUrl && <span className="text-[10px] bg-ableton-accent/20 text-ableton-accent px-1.5 py-0.5 rounded">IMG</span>}
-                    </div>
-                    <p className="text-sm truncate text-ableton-text group-hover:text-white">{item.text || "Image Analysis"}</p>
+                  <div key={item.id} onClick={() => loadFromHistory(item)} className="p-3 rounded bg-ableton-panel hover:bg-ableton-border cursor-pointer transition-colors text-xs border-l-2 border-transparent hover:border-ableton-accent truncate flex items-center justify-between group">
+                    <span className="truncate group-hover:text-white">{item.text || "(Image)"}</span>
                   </div>
                 ))}
-                {history.length === 0 && <div className="p-8 text-center text-ableton-muted text-sm italic opacity-50">No history yet.</div>}
+                {history.length === 0 && <div className="p-4 text-xs text-ableton-muted text-center italic mt-10">No sessions recorded.</div>}
              </div>
           )}
 
           {activeTab === 'templates' && (
             <div className="space-y-2">
-               {templates.map((t) => (
-                 <div key={t.id} className="bg-ableton-panel rounded-lg p-3 border border-ableton-border hover:border-ableton-accent/50 transition-all group relative overflow-hidden">
-                    <div onClick={() => loadTemplate(t)} className="cursor-pointer relative z-10">
+               {templates.length > 0 ? templates.map((t) => (
+                 <div key={t.id} className="group bg-ableton-panel rounded p-3 border border-ableton-border hover:border-ableton-accent/50 transition-colors">
+                    <div onClick={() => loadTemplate(t)} className="cursor-pointer">
                       <div className="flex justify-between items-start">
                          <h4 className="text-sm font-semibold text-ableton-text group-hover:text-ableton-accent transition-colors truncate pr-2">{t.name}</h4>
-                         {t.category && <span className="text-[9px] uppercase tracking-wider bg-black/20 px-1.5 py-0.5 rounded text-ableton-muted">{t.category}</span>}
+                         {t.category && <span className="text-[9px] uppercase tracking-wider bg-ableton-base px-1.5 py-0.5 rounded text-ableton-muted border border-ableton-border">{t.category}</span>}
                       </div>
-                      <p className="text-[10px] text-ableton-muted mt-2 font-mono">ID: {t.id.slice(-4)}</p>
+                      <p className="text-[10px] text-ableton-muted mt-1">{new Date(t.createdAt).toLocaleDateString()}</p>
                     </div>
-                    <button onClick={(e) => { e.stopPropagation(); deleteTemplate(t.id); }} className="absolute bottom-2 right-2 text-ableton-muted hover:text-red-400 z-20 opacity-0 group-hover:opacity-100 transition-opacity p-1">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                    </button>
+                    <div className="flex justify-end mt-2 pt-2 border-t border-white/5">
+                        <button onClick={(e) => { e.stopPropagation(); deleteTemplate(t.id); }} className="text-xs text-ableton-muted hover:text-red-400 flex items-center gap-1">Delete</button>
+                    </div>
                  </div>
-               ))}
-               {templates.length === 0 && <div className="p-8 text-center text-ableton-muted text-sm italic opacity-50">No saved templates.</div>}
+               )) : (
+                 <div className="p-4 text-xs text-ableton-muted text-center italic mt-10">No saved templates.</div>
+               )}
             </div>
           )}
 
-          {activeTab === 'config' && (
-             <div className="space-y-8 pb-10 px-1">
-                <section>
-                   <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-widest mb-3 pl-1">Preset Modes</h3>
+          {activeTab === 'tools' && (
+              <div className="space-y-6">
+                 {/* MIDI Generator Tool */}
+                 <div className="space-y-3">
+                     <h3 className="text-xs font-bold text-ableton-accent uppercase tracking-wider border-b border-ableton-border pb-1">MIDI Pattern Generator</h3>
+                     <p className="text-[10px] text-ableton-muted leading-tight">Generate prompt commands for Live 12's transformation tools.</p>
+                     
+                     <div className="space-y-3 bg-ableton-panel p-3 rounded border border-ableton-border">
+                        <div className="space-y-1">
+                             <div className="flex justify-between text-[10px] text-ableton-muted uppercase"><span>Target Context</span></div>
+                             <select 
+                                value={midiTarget}
+                                onChange={(e) => setMidiTarget(e.target.value as any)}
+                                className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-xs text-ableton-text focus:outline-none focus:border-ableton-accent"
+                             >
+                                 <option value="general">General</option>
+                                 <option value="techno_bass">Dark Techno Bassline</option>
+                                 <option value="atmos_pad">Atmospheric Pads</option>
+                                 <option value="glitch_drums">Glitch/IDM Drums</option>
+                             </select>
+                        </div>
+                        <div className="space-y-1">
+                             <div className="flex justify-between text-[10px] text-ableton-muted uppercase"><span>Complexity</span><span>{preferences.midiComplexity}/10</span></div>
+                             <input type="range" min="1" max="10" value={preferences.midiComplexity} onChange={(e) => setPreferences({...preferences, midiComplexity: parseInt(e.target.value)})} className="w-full h-1 bg-ableton-base rounded-lg appearance-none cursor-pointer accent-ableton-accent"/>
+                        </div>
+                        <div className="space-y-1">
+                             <div className="flex justify-between text-[10px] text-ableton-muted uppercase"><span>Musicality</span><span>{preferences.midiMusicality}/10</span></div>
+                             <input type="range" min="1" max="10" value={preferences.midiMusicality} onChange={(e) => setPreferences({...preferences, midiMusicality: parseInt(e.target.value)})} className="w-full h-1 bg-ableton-base rounded-lg appearance-none cursor-pointer accent-ableton-accent"/>
+                        </div>
+                        <Button 
+                            className="w-full text-xs py-2 mt-2"
+                            onClick={() => {
+                                let contextText = "";
+                                if (midiTarget === 'techno_bass') contextText = "Dark Techno Basslines";
+                                else if (midiTarget === 'atmos_pad') contextText = "Atmospheric Pads";
+                                else if (midiTarget === 'glitch_drums') contextText = "Glitch and IDM Drum Patterns";
+                                
+                                const toolPrompt = `Generate a detailed guide using Live 12's 'Seed', 'Rhythm', and 'Shape' generators specifically for ${contextText || 'creative patterns'}. Complexity: ${preferences.midiComplexity}/10, Musicality: ${preferences.midiMusicality}/10. Explain specific settings for Density, Velocity, and Scale Awareness.`;
+                                setPrompt(toolPrompt);
+                                handleGenerate(toolPrompt);
+                            }}
+                        >
+                            Generate {midiTarget !== 'general' ? 'Contextual ' : ''}Guide
+                        </Button>
+                     </div>
+                 </div>
+
+                 {/* Arrangement Architect Tool */}
+                 <div className="space-y-3">
+                     <h3 className="text-xs font-bold text-ableton-accent uppercase tracking-wider border-b border-ableton-border pb-1">Arrangement Architect</h3>
+                     <div className="space-y-3 bg-ableton-panel p-3 rounded border border-ableton-border">
+                        <div className="space-y-1">
+                           <div className="flex justify-between text-[10px] text-ableton-muted uppercase"><span>Genre</span></div>
+                           <select value={arrangeGenre} onChange={(e) => setArrangeGenre(e.target.value)} className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-xs text-ableton-text">
+                              <option value="Techno">Techno</option>
+                              <option value="House">House</option>
+                              <option value="DnB">Drum & Bass</option>
+                              <option value="Ambient">Ambient</option>
+                              <option value="Pop">Pop / Structure</option>
+                           </select>
+                        </div>
+                        <div className="space-y-1">
+                           <div className="flex justify-between text-[10px] text-ableton-muted uppercase"><span>Energy Curve</span></div>
+                           <select value={arrangeEnergy} onChange={(e) => setArrangeEnergy(e.target.value)} className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-xs text-ableton-text">
+                              <option value="Peak Time">Peak Time (High Energy)</option>
+                              <option value="Deep">Deep / Hypnotic</option>
+                              <option value="Radio">Radio Edit (Short)</option>
+                           </select>
+                        </div>
+                        <Button 
+                            className="w-full text-xs py-2 mt-2"
+                            onClick={() => {
+                                const toolPrompt = `Create a complete arrangement structure guide for a ${arrangeGenre} track with a ${arrangeEnergy} vibe. Break it down into sections (Intro, Verse/Build, Drop/Chorus, etc.) with bar counts. Suggest automation moves for transitions.`;
+                                setPrompt(toolPrompt);
+                                handleGenerate(toolPrompt);
+                            }}
+                        >
+                            Generate Arrangement
+                        </Button>
+                     </div>
+                 </div>
+                 
+                 {/* Stem Separation Helper */}
+                 <div className="space-y-3">
+                     <h3 className="text-xs font-bold text-ableton-accent uppercase tracking-wider border-b border-ableton-border pb-1">Stem Splitter</h3>
+                      <Button 
+                            variant="secondary"
+                            className="w-full text-xs py-2"
+                            onClick={() => {
+                                const toolPrompt = "Guide me through splitting audio into stems using Live 12's Stem Separation feature, focusing on artifact removal.";
+                                setPrompt(toolPrompt);
+                                handleGenerate(toolPrompt);
+                            }}
+                        >
+                            Start Stem Separation
+                        </Button>
+                 </div>
+              </div>
+          )}
+
+          {activeTab === 'settings' && (
+             <div className="space-y-6 pb-24">
+                <div className="space-y-3">
+                   <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-wider">Quick Config</h3>
+                   <div className="flex gap-2">
+                      <button onClick={() => applyConfigPreset('purist')} className="flex-1 bg-ableton-panel border border-ableton-border rounded px-2 py-2 text-[10px] hover:bg-ableton-surface hover:text-ableton-accent transition-colors">Purist</button>
+                      <button onClick={() => applyConfigPreset('experimental')} className="flex-1 bg-ableton-panel border border-ableton-border rounded px-2 py-2 text-[10px] hover:bg-ableton-surface hover:text-ableton-accent transition-colors">Experimental</button>
+                      <button onClick={() => applyConfigPreset('beginner')} className="flex-1 bg-ableton-panel border border-ableton-border rounded px-2 py-2 text-[10px] hover:bg-ableton-surface hover:text-ableton-accent transition-colors">Beginner</button>
+                   </div>
+                </div>
+
+                <div className="space-y-4 border-t border-ableton-border pt-4">
+                    <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-wider">Fine-Tuning</h3>
+                    <div className="space-y-3">
+                        <div className="space-y-1">
+                            <div className="flex justify-between text-[10px] text-ableton-muted uppercase"><span>Sentence Complexity</span><span>{preferences.sentenceComplexity}/10</span></div>
+                            <input type="range" min="1" max="10" value={preferences.sentenceComplexity} onChange={(e) => setPreferences({...preferences, sentenceComplexity: parseInt(e.target.value)})} className="w-full h-1 bg-ableton-panel rounded-lg appearance-none cursor-pointer accent-ableton-accent"/>
+                        </div>
+                        <div className="space-y-1">
+                            <div className="flex justify-between text-[10px] text-ableton-muted uppercase"><span>Jargon</span><span>{preferences.jargonLevel}/10</span></div>
+                            <input type="range" min="1" max="10" value={preferences.jargonLevel} onChange={(e) => setPreferences({...preferences, jargonLevel: parseInt(e.target.value)})} className="w-full h-1 bg-ableton-panel rounded-lg appearance-none cursor-pointer accent-ableton-accent"/>
+                        </div>
+                        <div className="space-y-1">
+                            <div className="flex justify-between text-[10px] text-ableton-muted uppercase"><span>Depth</span><span>{preferences.deviceExplanationDepth}/10</span></div>
+                            <input type="range" min="1" max="10" value={preferences.deviceExplanationDepth} onChange={(e) => setPreferences({...preferences, deviceExplanationDepth: parseInt(e.target.value)})} className="w-full h-1 bg-ableton-panel rounded-lg appearance-none cursor-pointer accent-ableton-accent"/>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="space-y-3 border-t border-ableton-border pt-4">
+                   <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-wider">Theme</h3>
                    <div className="grid grid-cols-3 gap-2">
-                      {['Purist', 'Experimental', 'Beginner'].map(mode => (
-                          <button key={mode} onClick={() => applyConfigPreset(mode.toLowerCase())} className="bg-ableton-panel border border-ableton-border rounded-md py-2 text-[10px] font-bold uppercase hover:bg-ableton-accent hover:text-white hover:border-transparent transition-all">
-                            {mode}
-                          </button>
-                      ))}
-                   </div>
-                </section>
-
-                <section>
-                    <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-widest mb-3 pl-1">Response Style</h3>
-                    <div className="space-y-4 bg-ableton-panel p-4 rounded-lg border border-ableton-border">
-                        {[
-                            { label: 'Complexity', key: 'sentenceComplexity' },
-                            { label: 'Jargon', key: 'jargonLevel' },
-                            { label: 'Depth', key: 'deviceExplanationDepth' }
-                        ].map((item) => (
-                            <div key={item.key} className="space-y-1">
-                                <div className="flex justify-between text-[10px] text-ableton-muted uppercase font-bold">
-                                    <span>{item.label}</span>
-                                    <span className="text-ableton-accent">{(preferences as any)[item.key]}/10</span>
-                                </div>
-                                <input type="range" min="1" max="10" value={(preferences as any)[item.key]} onChange={(e) => setPreferences({...preferences, [item.key]: parseInt(e.target.value)})} className="w-full h-1.5 bg-ableton-base rounded-full appearance-none cursor-pointer accent-ableton-accent" />
-                            </div>
-                        ))}
-                    </div>
-                </section>
-
-                <section>
-                    <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-widest mb-3 pl-1 flex items-center justify-between">
-                        <span>MIDI Generators</span>
-                        <span className="text-[9px] bg-ableton-accent px-1.5 rounded text-white">v12</span>
-                    </h3>
-                    <div className="space-y-4 bg-ableton-panel p-4 rounded-lg border border-ableton-border">
-                         {[
-                            { label: 'Pattern Chaos', key: 'midiComplexity' },
-                            { label: 'Musicality', key: 'midiMusicality' }
-                        ].map((item) => (
-                            <div key={item.key} className="space-y-1">
-                                <div className="flex justify-between text-[10px] text-ableton-muted uppercase font-bold">
-                                    <span>{item.label}</span>
-                                    <span className="text-ableton-accent">{(preferences as any)[item.key]}/10</span>
-                                </div>
-                                <input type="range" min="1" max="10" value={(preferences as any)[item.key]} onChange={(e) => setPreferences({...preferences, [item.key]: parseInt(e.target.value)})} className="w-full h-1.5 bg-ableton-base rounded-full appearance-none cursor-pointer accent-ableton-accent" />
-                            </div>
-                        ))}
-                    </div>
-                </section>
-                
-                <section>
-                   <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-widest mb-3 pl-1">Themes</h3>
-                   <div className="grid grid-cols-4 gap-2">
                      {availableThemes.map(t => (
-                         <button key={t.id} onClick={() => setTheme(t.id)} className={`h-8 rounded-md border-2 transition-all ${theme === t.id ? 'border-ableton-accent scale-105' : 'border-transparent hover:scale-105'}`} style={{backgroundColor: t.color}} title={t.name} />
+                         <button key={t.id} onClick={() => setTheme(t.id)} className={`p-1 rounded border transition-all ${theme === t.id ? 'border-ableton-accent bg-ableton-panel' : 'border-transparent hover:bg-ableton-panel'}`} title={t.name}>
+                            <div className="w-full h-4 rounded mb-1" style={{backgroundColor: t.color}}></div>
+                            <span className="text-[9px] text-ableton-muted block text-center truncate">{t.name}</span>
+                         </button>
                      ))}
-                     <button onClick={() => setIsCreatingTheme(!isCreatingTheme)} className="h-8 rounded-md border-2 border-dashed border-ableton-muted flex items-center justify-center text-ableton-muted hover:text-ableton-accent hover:border-ableton-accent transition-all">+</button>
+                     <button onClick={() => setIsCreatingTheme(!isCreatingTheme)} className="p-1 rounded border border-dashed border-ableton-muted hover:border-ableton-accent text-ableton-muted flex flex-col items-center justify-center h-[42px]"><span className="text-lg font-bold leading-none">+</span></button>
                    </div>
+                   
                    {isCreatingTheme && (
-                       <div className="mt-4 p-3 bg-ableton-panel rounded-lg border border-ableton-border space-y-3">
-                           <input type="text" placeholder="Theme Name" value={newThemeName} onChange={(e) => setNewThemeName(e.target.value)} className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-xs text-ableton-text outline-none focus:border-ableton-accent" />
-                           <div className="grid grid-cols-4 gap-2">
-                               {['base', 'surface', 'text', 'accent'].map(k => (
-                                   <div key={k} className="flex flex-col gap-1">
-                                       <label className="text-[9px] uppercase text-ableton-muted">{k}</label>
-                                       <input type="color" value={(newThemeDraft as any)[k]} onChange={e => setNewThemeDraft({...newThemeDraft, [k]: e.target.value})} className="w-full h-6 bg-transparent cursor-pointer rounded" />
-                                   </div>
-                               ))}
+                       <div className="mt-4 p-3 bg-ableton-panel rounded border border-ableton-border space-y-3 animate-in fade-in slide-in-from-top-2">
+                           <input type="text" placeholder="Theme Name" value={newThemeName} onChange={(e) => setNewThemeName(e.target.value)} className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-xs text-ableton-text mb-2"/>
+                           
+                           {/* Color Pickers */}
+                           <div className="grid grid-cols-2 gap-2">
+                              {Object.entries(newThemeDraft).map(([key, value]) => (
+                                <div key={key} className="space-y-1">
+                                  <label className="text-[9px] text-ableton-muted uppercase">{key}</label>
+                                  <div className="flex gap-2">
+                                     <input type="color" value={value} onChange={(e) => setNewThemeDraft(prev => ({...prev, [key]: e.target.value}))} className="h-6 w-8 bg-transparent cursor-pointer" />
+                                     <input type="text" value={value} onChange={(e) => setNewThemeDraft(prev => ({...prev, [key]: e.target.value}))} className="w-full text-[10px] bg-ableton-base border-none rounded px-1 text-ableton-text" />
+                                  </div>
+                                </div>
+                              ))}
                            </div>
-                           <Button onClick={saveCustomTheme} disabled={!newThemeName} className="w-full py-1 text-xs mt-2">Save</Button>
+
+                           <Button onClick={saveCustomTheme} disabled={!newThemeName} className="w-full mt-2 py-1 text-xs">Save Theme</Button>
                        </div>
                    )}
-                </section>
+                </div>
+
+                {/* Developer / Meta-Prompt Tool */}
+                <div className="space-y-3 border-t border-ableton-border pt-4">
+                    <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-wider">Developer / Meta-Tools</h3>
+                    <p className="text-[10px] text-ableton-muted">Generate detailed specifications and prompts for recreating or extending this application.</p>
+                    <Button 
+                        variant="secondary" 
+                        onClick={() => {
+                            const metaPrompt = `Create detailed Markdown documents describing the specifications of this 'LiveWire' application. Include:
+                            1. funct_python3.md: Functionality guide designed for Python 3.
+                            2. metaPrompt.md: A prompt to generate prompts.
+                            3. App logic, UI design patterns, and Node.js implementation details.
+                            Format the output as a structured guide with code blocks where appropriate.`;
+                            setPrompt(metaPrompt);
+                            handleGenerate(metaPrompt);
+                        }} 
+                        className="w-full text-xs border-dashed"
+                    >
+                        Generate App Meta-Specs
+                    </Button>
+                </div>
              </div>
           )}
         </div>
       </aside>
 
-      {/* Main Area */}
-      <main className="flex-1 flex flex-col relative">
-        <header className="h-16 bg-ableton-surface/80 backdrop-blur-md border-b border-ableton-border flex items-center justify-between px-6 z-20 absolute top-0 left-0 right-0">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setShowHistory(true)} className="md:hidden text-ableton-muted hover:text-ableton-text">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
-            </button>
-            <div className="flex flex-col leading-none">
-                <h1 className="text-lg font-bold tracking-tight text-ableton-text">LiveWire</h1>
-                <span className="text-[10px] text-ableton-accent font-mono uppercase tracking-widest">Architect</span>
-            </div>
-          </div>
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col h-screen overflow-hidden relative bg-ableton-base">
+        
+        {/* Top Utility Bar */}
+        <header className="h-14 bg-ableton-surface border-b border-ableton-border flex items-center justify-between px-6 flex-shrink-0">
+          <button onClick={() => setShowHistory(true)} className="md:hidden text-ableton-muted"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg></button>
+          
           <div className="flex items-center gap-4">
-             <div className="text-[10px] font-mono text-ableton-muted bg-ableton-panel px-2 py-1 rounded border border-ableton-border hidden sm:block">Ableton Live {preferences.liveVersion}</div>
-             <button onClick={() => setShowHelp(true)} className="text-ableton-muted hover:text-ableton-text transition-colors"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></button>
+              {/* Undo/Redo */}
+              <div className="flex bg-ableton-base rounded-sm border border-ableton-border">
+                  <button onClick={handleUndo} disabled={history.length < 2} className="p-2 text-ableton-muted hover:text-white disabled:opacity-30 transition-colors border-r border-ableton-border"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg></button>
+                  <button onClick={handleRedo} disabled={redoStack.length < 2} className="p-2 text-ableton-muted hover:text-white disabled:opacity-30 transition-colors"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10h-10a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6" /></svg></button>
+              </div>
+          </div>
+          
+          <div className="flex items-center gap-3">
+             <input type="file" ref={sessionInputRef} onChange={handleLoadSession} accept=".json" className="hidden" />
+             <Button variant="secondary" onClick={() => sessionInputRef.current?.click()} className="text-[10px] py-1 h-8">Load Session</Button>
+             <Button variant="secondary" onClick={handleSaveSession} className="text-[10px] py-1 h-8">Save Session</Button>
+             <button onClick={() => setShowHelp(true)} className="w-8 h-8 rounded-full bg-ableton-panel text-ableton-muted hover:text-ableton-accent hover:bg-white/5 flex items-center justify-center transition-colors ml-2" title="Help">
+                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+             </button>
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto pt-20 pb-40 px-4 md:px-8 scroll-smooth" ref={bottomRef}>
-           {!response && !isGenerating && !responseImage ? (
-             <div className="max-w-5xl mx-auto mt-8 animate-in fade-in zoom-in-95 duration-500">
-                <div className="text-center mb-12">
-                    <h2 className="text-4xl md:text-5xl font-light text-ableton-text mb-4 tracking-tight">What are we building?</h2>
-                    <p className="text-ableton-muted text-lg max-w-2xl mx-auto font-light">Select a workflow or describe your idea below.</p>
+        {/* Scrollable Output Area */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
+           {!response && !isGenerating && !responseImage && (
+             <div className="max-w-4xl mx-auto space-y-12 mt-8">
+                <div>
+                   <h2 className="text-xl font-bold text-ableton-text mb-6 tracking-tight border-b border-ableton-border pb-2">Techno Workflows</h2>
+                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {technoWorkflows.map((s, i) => (
+                      <button key={i} onClick={() => { setPrompt(s.prompt); handleGenerate(s.prompt); }} className="text-left p-5 bg-ableton-panel border border-ableton-border hover:border-ableton-accent/50 hover:bg-ableton-surface transition-all rounded-sm shadow-sm opacity-90 hover:opacity-100 flex flex-col gap-3 group">
+                        <span className="font-bold text-ableton-accent group-hover:text-white transition-colors">{s.label}</span>
+                        <span className="text-xs text-ableton-muted leading-relaxed">{s.prompt}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div>
-                        <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-widest mb-4 border-b border-ableton-border pb-2">Techno Workflows</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {technoWorkflows.map((s, i) => (
-                                <button key={i} onClick={() => { setPrompt(s.prompt); handleGenerate(s.prompt); }} className="text-left p-4 bg-ableton-panel border border-ableton-border hover:border-ableton-accent hover:bg-ableton-surface transition-all rounded-lg group shadow-sm hover:shadow-md">
-                                    <span className="text-xl mb-2 block">{s.icon}</span>
-                                    <span className="font-semibold text-sm text-ableton-text block mb-1 group-hover:text-ableton-accent">{s.label}</span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                    <div>
-                        <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-widest mb-4 border-b border-ableton-border pb-2">Live 12 Advanced</h3>
-                         <div className="flex flex-col gap-3">
-                            {advancedWorkflows.map((s, i) => (
-                                <button key={i} onClick={() => { setPrompt(s.prompt); handleGenerate(s.prompt); }} className="text-left p-4 bg-ableton-panel border border-ableton-border hover:border-ableton-accent hover:bg-ableton-surface transition-all rounded-lg flex items-center gap-4 group shadow-sm hover:shadow-md">
-                                    <span className="text-2xl">{s.icon}</span>
-                                    <div>
-                                        <span className="font-semibold text-sm text-ableton-text block group-hover:text-ableton-accent">{s.label}</span>
-                                        <span className="text-xs text-ableton-muted line-clamp-1">{s.prompt}</span>
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+                <div>
+                   <h2 className="text-xl font-bold text-ableton-text mb-6 tracking-tight border-b border-ableton-border pb-2">Advanced Features</h2>
+                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {advancedWorkflows.map((s, i) => (
+                      <button key={i} onClick={() => { setPrompt(s.prompt); handleGenerate(s.prompt); }} className="text-left p-5 bg-ableton-panel border border-ableton-border hover:border-ableton-accent/50 hover:bg-ableton-surface transition-all rounded-sm shadow-sm opacity-90 hover:opacity-100 flex flex-col gap-3 group">
+                         <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-ableton-yellow group-hover:animate-pulse"></span><span className="font-bold text-ableton-text group-hover:text-white transition-colors">{s.label}</span></div>
+                         <span className="text-xs text-ableton-muted leading-relaxed pl-4">{s.prompt}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-             </div>
-           ) : (
-             <div className="max-w-4xl mx-auto space-y-6">
-                <div className="flex justify-end gap-2 opacity-0 hover:opacity-100 transition-opacity">
-                    <Button variant="secondary" onClick={handleCopy} className="text-xs py-1 h-8">{copied ? 'Copied' : 'Copy'}</Button>
-                    <Button variant="secondary" onClick={handleExport} className="text-xs py-1 h-8">Export</Button>
-                    <Button variant="secondary" onClick={openSaveModal} className="text-xs py-1 h-8">Save</Button>
-                </div>
-                <OutputDisplay content={response} imageUrl={responseImage} isStreaming={isGenerating} />
-                {lastPrompt && !isGenerating && (
-                    <div className="flex justify-center gap-2 mt-4">
-                        <button onClick={() => handleGenerate(lastPrompt, 'much_longer')} className="text-xs bg-ableton-panel px-3 py-1 rounded-full text-ableton-muted hover:text-ableton-text hover:bg-ableton-border transition-colors">More Detail</button>
-                        <button onClick={() => handleGenerate(lastPrompt, 'short')} className="text-xs bg-ableton-panel px-3 py-1 rounded-full text-ableton-muted hover:text-ableton-text hover:bg-ableton-border transition-colors">Simplify</button>
-                    </div>
-                )}
              </div>
            )}
-           <div className="h-24"></div> 
+
+           <div className="max-w-4xl mx-auto relative">
+             {response && !isGenerating && (
+                 <>
+                     <div className="flex justify-end mb-3 gap-2">
+                        <Button variant="secondary" onClick={handleCopy} className="flex items-center gap-2 text-[10px] h-7 px-3">{copied ? 'Copied' : 'Copy'}</Button>
+                        <Button variant="secondary" onClick={() => setShowExportModal(true)} className="flex items-center gap-2 text-[10px] h-7 px-3">Export</Button>
+                        <Button variant="secondary" onClick={openSaveModal} className="flex items-center gap-2 text-[10px] h-7 px-3">Save as Template</Button>
+                     </div>
+                     <OutputDisplay content={response} imageUrl={responseImage} isStreaming={isGenerating} />
+                     
+                     {/* Intelligent Suggestions */}
+                     <div className="mt-4 border-t border-ableton-border pt-4 animate-in fade-in slide-in-from-top-4">
+                         <h4 className="text-[10px] text-ableton-muted uppercase tracking-wider font-bold mb-2 flex items-center gap-1">
+                             <svg className="w-3 h-3 text-ableton-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                             Intelligent Suggestions
+                         </h4>
+                         <div className="flex gap-2">
+                             {getSmartSuggestions(lastPrompt).map((suggestion, idx) => (
+                                 <button 
+                                     key={idx}
+                                     onClick={() => { setPrompt(suggestion); handleGenerate(suggestion); }}
+                                     className="text-xs bg-ableton-panel hover:bg-ableton-accent hover:text-white text-ableton-text px-3 py-2 rounded transition-colors border border-ableton-border"
+                                 >
+                                     {suggestion}
+                                 </button>
+                             ))}
+                         </div>
+                     </div>
+                 </>
+             )}
+           </div>
         </div>
 
-        {/* Floating Input Area */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 pointer-events-none z-30 flex justify-center">
-            <div className="w-full max-w-3xl bg-ableton-surface/90 backdrop-blur-xl border border-ableton-border shadow-2xl rounded-2xl p-2 pointer-events-auto flex flex-col gap-2 transition-all focus-within:ring-2 focus-within:ring-ableton-accent/50 focus-within:border-ableton-accent">
-                
-                {selectedImage && (
-                    <div className="px-3 pt-2 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                             <img src={`data:image/png;base64,${selectedImage}`} className="h-10 w-10 rounded object-cover border border-ableton-border" alt="Selected" />
-                             <div className="flex flex-col">
-                                <span className="text-xs font-bold text-ableton-text">Image Attached</span>
-                                <label className="flex items-center gap-1 cursor-pointer">
-                                    <input type="checkbox" checked={isEditMode} onChange={(e) => setIsEditMode(e.target.checked)} className="accent-ableton-accent w-3 h-3" />
-                                    <span className="text-[10px] text-ableton-muted">Edit Mode</span>
-                                </label>
-                             </div>
-                        </div>
-                        <button onClick={() => {setSelectedImage(null); setIsEditMode(false)}} className="text-ableton-muted hover:text-red-400"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+        {/* Input Footer */}
+        <div className="bg-ableton-surface border-t border-ableton-border p-4 flex-shrink-0 z-10">
+          <div className="max-w-4xl mx-auto space-y-3">
+             {selectedImage && (
+                 <div className="flex items-center gap-3 bg-ableton-base p-2 rounded border border-ableton-border w-fit animate-in slide-in-from-bottom-2 fade-in">
+                    <img src={`data:image/png;base64,${selectedImage}`} className="h-10 w-10 object-cover rounded-sm" alt="Upload" />
+                    <div className="flex flex-col">
+                        <span className="text-xs text-ableton-muted">Image attached</span>
+                        <label className="flex items-center gap-2 cursor-pointer mt-1">
+                            <input type="checkbox" checked={isEditMode} onChange={(e) => setIsEditMode(e.target.checked)} className="w-3 h-3 accent-ableton-accent"/>
+                            <span className="text-xs text-ableton-text hover:text-ableton-accent">Edit Mode</span>
+                        </label>
                     </div>
-                )}
+                    <button onClick={() => { setSelectedImage(null); setIsEditMode(false); }} className="text-ableton-muted hover:text-ableton-text ml-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                 </div>
+             )}
 
-                <div className="flex items-end gap-2">
-                    <div className="flex gap-1 pb-1 pl-1">
-                         <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept="image/*" className="hidden" />
-                         <Button variant="icon" onClick={() => fileInputRef.current?.click()} title="Upload Image"><ImageIcon /></Button>
-                         <Button variant="icon" onClick={isRecording ? stopRecording : startRecording} title="Record Audio"><MicIcon active={isRecording} /></Button>
-                    </div>
-                    
-                    <textarea 
-                        value={prompt}
-                        onChange={(e) => setPrompt(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        placeholder={selectedImage ? (isEditMode ? "Describe edits..." : "Ask about this image...") : "Ask LiveWire..."}
-                        className="flex-1 bg-transparent border-none text-ableton-text placeholder-ableton-muted/50 focus:ring-0 resize-none py-3 px-2 max-h-32 min-h-[44px] text-sm leading-relaxed scrollbar-hide"
-                        rows={1}
-                    />
-
-                    <Button 
-                        onClick={() => handleGenerate()} 
-                        disabled={!prompt.trim() && !selectedImage} 
-                        isLoading={isGenerating}
-                        className="rounded-xl h-10 w-10 !p-0 !min-w-0 bg-ableton-accent hover:bg-ableton-accent-hover text-white shadow-lg mb-1 mr-1 flex-shrink-0"
-                    >
-                        {!isGenerating && <SendIcon />}
+             <div className="flex gap-3">
+                <div className="flex items-center gap-2">
+                     <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept="image/*" className="hidden" />
+                    <Button variant="icon" onClick={() => fileInputRef.current?.click()} title="Upload Image">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    </Button>
+                    <Button variant="icon" onClick={isRecording ? stopRecording : startRecording} className={isRecording ? "text-red-500 bg-red-500/10 animate-pulse" : ""} title="Transcribe Audio">
+                        {isRecording ? <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1" /></svg> : <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>}
                     </Button>
                 </div>
-            </div>
+
+                <div className="flex-1 relative group">
+                    <input type="text" value={prompt} onChange={(e) => setPrompt(e.target.value)} onKeyDown={handleKeyDown} placeholder={selectedImage ? (isEditMode ? "Describe how to edit this image..." : "Ask about this image...") : "Describe a sound, effect, or workflow..."} className="w-full bg-ableton-base border border-ableton-border rounded p-4 pr-12 text-ableton-text placeholder-ableton-muted focus:outline-none focus:border-ableton-accent focus:ring-1 focus:ring-ableton-accent transition-all font-mono text-sm shadow-inner" />
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[10px] text-ableton-muted border border-ableton-border rounded px-1.5 py-0.5 opacity-50 group-hover:opacity-100 transition-opacity">ENTER</div>
+                </div>
+                <Button onClick={() => handleGenerate()} isLoading={isGenerating} disabled={(!prompt.trim() && !selectedImage)}>Generate</Button>
+             </div>
+
+             {/* Tiny Buttons - Modifiers */}
+             {lastPrompt && !isGenerating && (
+                <div className="flex gap-2 justify-center pt-2 animate-in fade-in slide-in-from-top-1">
+                    <button onClick={() => handleGenerate(lastPrompt, 'much_longer')} className="text-[10px] uppercase font-bold tracking-wider px-3 py-1.5 bg-ableton-panel hover:bg-ableton-accent hover:text-white text-ableton-muted rounded-full transition-colors border border-ableton-border">Much Longer</button>
+                    <button onClick={() => handleGenerate(lastPrompt, 'professional')} className="text-[10px] uppercase font-bold tracking-wider px-3 py-1.5 bg-ableton-panel hover:bg-ableton-accent hover:text-white text-ableton-muted rounded-full transition-colors border border-ableton-border">Much More Professional</button>
+                    <button onClick={() => handleGenerate(lastPrompt, 'short')} className="text-[10px] uppercase font-bold tracking-wider px-3 py-1.5 bg-ableton-panel hover:bg-ableton-accent hover:text-white text-ableton-muted rounded-full transition-colors border border-ableton-border">Short</button>
+                </div>
+             )}
+          </div>
         </div>
       </main>
     </div>
