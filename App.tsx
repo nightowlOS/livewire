@@ -3,10 +3,11 @@ import { generateAbletonGuideStream, transcribeAudio, editImage } from './servic
 import { Button } from './components/Button';
 import { OutputDisplay } from './components/OutputDisplay';
 import { Switch } from './components/Switch';
-import { ChatMessage, Theme, SavedTemplate } from './types';
+import { ChatMessage, Theme, SavedTemplate, UserPreferences } from './types';
 
 const App: React.FC = () => {
   const [prompt, setPrompt] = useState('');
+  const [lastPrompt, setLastPrompt] = useState(''); // Store last prompt for regeneration modifiers
   const [isGenerating, setIsGenerating] = useState(false);
   const [response, setResponse] = useState('');
   const [responseImage, setResponseImage] = useState<string | undefined>(undefined);
@@ -24,6 +25,23 @@ const App: React.FC = () => {
   const [showHelp, setShowHelp] = useState(false);
   const [copied, setCopied] = useState(false);
   
+  // Preferences
+  const [preferences, setPreferences] = useState<UserPreferences>({
+      detailLevel: 'intermediate',
+      deviceSuite: 'stock',
+      creativity: 'standard',
+      os: 'mac',
+      liveVersion: '12',
+      genre: 'general',
+      tone: 'encouraging',
+      outputLength: 'balanced',
+      useEmojis: true,
+      useAnalogies: true,
+      showShortcuts: true,
+      format: 'steps',
+      includeTroubleshooting: false
+  });
+
   // Template States
   const [templates, setTemplates] = useState<SavedTemplate[]>(() => {
     try {
@@ -58,37 +76,116 @@ const App: React.FC = () => {
     localStorage.setItem('ableton-templates', JSON.stringify(templates));
   }, [templates]);
 
-  // Techno Genres Configuration
-  const technoGenres = [
-    { label: "Rumble Techno", prompt: "Create a guide for a heavy Rumble Techno low-end chain using Reverb and Roar." },
-    { label: "Dub Techno", prompt: "Create a sound design recipe for Dub Techno chords using Analog and Echo." },
-    { label: "Hypnotic", prompt: "Create a workflow for rolling Hypnotic Techno loops using polymetric MIDI tools." },
-    { label: "Hard Groove", prompt: "Create a guide for Hard Groove Techno percussion processing." },
-    { label: "Industrial", prompt: "Create a guide for Industrial Techno distortion using Roar." }
+  // Specific Techno Workflows
+  const technoWorkflows = [
+    { label: "Kick Rumble Generator", prompt: "Create a detailed chain for a Techno Rumble Kick using Hybrid Reverb and Roar. Explain macro mappings for decay and distortion." },
+    { label: "Polymetric Sequencer", prompt: "Explain how to set up a polymetric techno sequence using the new Live 12 MIDI Tools, mixing 4/4 kicks with 3/16 synth lines." },
+    { label: "Dub Techno Chord Rack", prompt: "Design a classic Dub Techno chord rack using Analog, Echo, and Auto Filter. Focus on texture and feedback loops." },
+    { label: "Industrial Distortion Bus", prompt: "Create an industrial techno drum bus processing chain using Roar in Multiband mode and Drum Buss." },
+    { label: "Hypnotic Bleep Loop", prompt: "Show me a workflow to generate hypnotic, evolving bleep loops using Note Echo, Random, and Scale Awareness." },
+    { label: "Hardgroove Percussion", prompt: "Create a processing chain for 90s Hardgroove loops using Vocoder (noise mode) and Overdrive to add texture." }
   ];
 
-  // General Suggestions
-  const quickTips = [
-    "Meld & Roar: Bi-timbral granular texture",
-    "Roar: Multiband distortion for Drum Bus",
-    "Workflow: Generative MIDI for trap hi-hats",
-    "Glitchy breakbeats like a REX loop",
-    "Scale Awareness: Quantizing live MIDI input",
-    "Performance: Hybrid Reverb freeze drones"
+  // Advanced Feature Prompts
+  const advancedWorkflows = [
+    { label: "REX & Slicing Masterclass", prompt: "Explain how to use 'Slice to New MIDI Track' to recreate the REX file workflow. Discuss preserving transients in Simpler." },
+    { label: "Stem Separation Remixing", prompt: "Provide a step-by-step guide on using Ableton Live 12's Stem Separation feature to isolate vocals, drums, bass, or other instruments from an audio clip. Include tips for cleaning up artifacts." },
+    { label: "Generative MIDI Tools", prompt: "Explain how to use Ableton Live 12's new MIDI Clip view features like 'Seed', 'Rhythm', and 'Shape' to generate melodic patterns. Also, detail how to use 'Scale Awareness' for musical results." }
   ];
 
-  const handleGenerate = async (textToUse?: string) => {
+  const applyConfigPreset = (preset: string) => {
+    switch (preset) {
+        case 'purist':
+            setPreferences({
+                ...preferences,
+                deviceSuite: 'stock',
+                creativity: 'standard',
+                tone: 'professional',
+                useEmojis: false,
+                useAnalogies: false,
+                outputLength: 'detailed',
+                includeTroubleshooting: true
+            });
+            break;
+        case 'experimental':
+            setPreferences({
+                ...preferences,
+                deviceSuite: 'm4l',
+                creativity: 'experimental',
+                tone: 'encouraging',
+                useEmojis: true,
+                useAnalogies: true,
+                outputLength: 'balanced',
+                includeTroubleshooting: false
+            });
+            break;
+        case 'beginner':
+            setPreferences({
+                ...preferences,
+                detailLevel: 'beginner',
+                tone: 'encouraging',
+                outputLength: 'detailed',
+                useEmojis: true,
+                useAnalogies: true,
+                format: 'steps',
+                showShortcuts: true
+            });
+            break;
+    }
+  };
+
+  const handleGenerate = async (textToUse?: string, modifier?: string) => {
     const activePrompt = textToUse || prompt;
     if (!activePrompt.trim() && !selectedImage) return;
+
+    // Determine config overrides based on modifier
+    let tempPrefs = { ...preferences };
+    let extraInstruction = "";
+
+    if (modifier === 'much_longer') {
+        extraInstruction = "Make this response EXTENSIVE, DETAILED, and LONG. Cover every nuance.";
+        tempPrefs.outputLength = 'detailed';
+    } else if (modifier === 'professional') {
+        extraInstruction = "Use a strictly PROFESSIONAL, TECHNICAL, and ACADEMIC tone. No fluff.";
+        tempPrefs.tone = 'professional';
+        tempPrefs.useEmojis = false;
+        tempPrefs.useAnalogies = false;
+    } else if (modifier === 'short') {
+        extraInstruction = "Make this response extremely SHORT and CONCISE. Bullet points only.";
+        tempPrefs.outputLength = 'concise';
+        tempPrefs.format = 'bullet_points';
+    }
 
     setIsGenerating(true);
     setResponse('');
     setResponseImage(undefined);
+    setLastPrompt(activePrompt); // Save for re-runs
+
+    // Contextualize prompt with preferences
+    const contextPrompt = `${activePrompt} 
+    
+    ${extraInstruction ? `[IMPORTANT MODIFICATION]: ${extraInstruction}` : ''}
+
+    [Configuration Constraints]:
+    - Expertise Level: ${tempPrefs.detailLevel}
+    - OS for Shortcuts: ${tempPrefs.os === 'mac' ? 'macOS (Cmd, Opt)' : 'Windows (Ctrl, Alt)'}
+    - Live Version: Ableton Live ${tempPrefs.liveVersion}
+    - Preferred Genre Context: ${tempPrefs.genre}
+    - Tone: ${tempPrefs.tone}
+    - Length: ${tempPrefs.outputLength}
+    - Format: ${tempPrefs.format}
+    - Emojis: ${tempPrefs.useEmojis ? 'Yes' : 'No'}
+    - Analogies: ${tempPrefs.useAnalogies ? 'Use helpful analogies' : 'Technical only'}
+    - Device Restriction: ${tempPrefs.deviceSuite === 'stock' ? 'Use ONLY Stock Ableton Devices.' : 'You may include Max for Live devices.'}
+    - Creativity Mode: ${tempPrefs.creativity === 'experimental' ? 'Suggest unconventional signal routing and weird sound design tricks.' : 'Stick to standard, reliable industry techniques.'}
+    - Show Shortcuts: ${tempPrefs.showShortcuts ? 'Yes' : 'No'}
+    - Troubleshooting: ${tempPrefs.includeTroubleshooting ? 'Include common pitfalls' : 'No'}
+    `;
     
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
       role: 'user',
-      text: activePrompt,
+      text: modifier ? `${activePrompt} (${modifier.replace('_', ' ')})` : activePrompt,
       imageUrl: selectedImage || undefined,
       timestamp: Date.now()
     };
@@ -97,7 +194,7 @@ const App: React.FC = () => {
     try {
       if (selectedImage && isEditMode) {
         // Image Editing Flow
-        const newImageBase64 = await editImage(selectedImage, activePrompt);
+        const newImageBase64 = await editImage(selectedImage, contextPrompt);
         setResponseImage(newImageBase64);
         setResponse("Here is your edited image based on the prompt.");
 
@@ -113,7 +210,7 @@ const App: React.FC = () => {
       } else {
         // Text Generation / Image Analysis Flow
         let accumulatedResponse = "";
-        await generateAbletonGuideStream(activePrompt, selectedImage, (chunk) => {
+        await generateAbletonGuideStream(contextPrompt, selectedImage, (chunk) => {
           accumulatedResponse += chunk;
           setResponse(accumulatedResponse);
         });
@@ -129,8 +226,10 @@ const App: React.FC = () => {
       
       // Clear inputs after success
       setPrompt('');
-      setSelectedImage(null);
-      setIsEditMode(false);
+      if (!modifier) {
+          setSelectedImage(null);
+          setIsEditMode(false);
+      }
 
     } catch (error) {
       console.error("Failed to generate", error);
@@ -218,10 +317,6 @@ const App: React.FC = () => {
     setShowHistory(false);
   };
 
-  const toggleTheme = (checked: boolean) => {
-      setTheme(checked ? 'light' : 'dark');
-  };
-
   const openSaveModal = () => {
     setNewTemplateContent(response);
     setNewTemplateName('');
@@ -278,6 +373,16 @@ const App: React.FC = () => {
         console.error('Failed to copy:', err);
     }
   };
+
+  const availableThemes: {id: Theme, name: string, color: string}[] = [
+      { id: 'dark', name: 'Live 12 Dark', color: '#1a1a1a' },
+      { id: 'light', name: 'Live 12 Light', color: '#f3f3f3' },
+      { id: 'live9', name: 'Live 9 Legacy', color: '#dcdcdc' },
+      { id: 'vaporwave', name: 'Vaporwave', color: '#24123b' },
+      { id: 'matrix', name: 'The Matrix', color: '#000000' },
+      { id: 'rust', name: 'Rust', color: '#1c1917' },
+      { id: 'ocean', name: 'Deep Ocean', color: '#0f172a' },
+  ];
 
   return (
     <div className="min-h-screen bg-ableton-base text-ableton-text font-sans selection:bg-ableton-accent selection:text-white flex flex-col md:flex-row overflow-hidden transition-colors duration-300">
@@ -436,30 +541,199 @@ const App: React.FC = () => {
 
           {activeTab === 'config' && (
              <div className="p-4 space-y-6">
+                
+                {/* 0. Smart Presets (Synthesized Configs) */}
                 <div className="space-y-3">
-                   <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-wider">Appearance</h3>
-                   <div className="bg-ableton-panel p-4 rounded border border-ableton-border">
-                      <Switch 
-                        checked={theme === 'light'} 
-                        onChange={toggleTheme} 
-                        label={theme === 'light' ? 'Light Theme' : 'Dark Theme'}
-                      />
+                   <h3 className="text-xs font-bold text-ableton-accent uppercase tracking-wider">Quick Config Presets</h3>
+                   <div className="flex gap-2">
+                      <button onClick={() => applyConfigPreset('purist')} className="flex-1 bg-ableton-panel border border-ableton-border rounded px-2 py-2 text-[10px] hover:bg-ableton-surface hover:text-ableton-accent transition-colors">
+                        The Purist
+                      </button>
+                      <button onClick={() => applyConfigPreset('experimental')} className="flex-1 bg-ableton-panel border border-ableton-border rounded px-2 py-2 text-[10px] hover:bg-ableton-surface hover:text-ableton-accent transition-colors">
+                        Experimental
+                      </button>
+                      <button onClick={() => applyConfigPreset('beginner')} className="flex-1 bg-ableton-panel border border-ableton-border rounded px-2 py-2 text-[10px] hover:bg-ableton-surface hover:text-ableton-accent transition-colors">
+                        Beginner
+                      </button>
                    </div>
                 </div>
 
                 <div className="space-y-3">
-                   <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-wider">Preferences</h3>
-                   <div className="bg-ableton-panel p-4 rounded border border-ableton-border space-y-4">
-                       <label className="flex items-center gap-2 text-xs text-ableton-muted opacity-50 cursor-not-allowed">
-                          <input type="checkbox" disabled className="rounded border-ableton-border bg-ableton-base" />
-                          Always use High Quality Audio
-                       </label>
-                       <label className="flex items-center gap-2 text-xs text-ableton-muted opacity-50 cursor-not-allowed">
-                          <input type="checkbox" disabled className="rounded border-ableton-border bg-ableton-base" />
-                          Auto-save Recipes
-                       </label>
+                   <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-wider">Visual Theme</h3>
+                   <div className="grid grid-cols-3 gap-2">
+                     {availableThemes.map(t => (
+                         <button
+                           key={t.id}
+                           onClick={() => setTheme(t.id)}
+                           className={`p-1 rounded border transition-all ${theme === t.id ? 'border-ableton-accent bg-ableton-panel' : 'border-transparent hover:bg-ableton-panel'}`}
+                           title={t.name}
+                         >
+                            <div className="w-full h-8 rounded mb-1" style={{backgroundColor: t.color}}></div>
+                            <span className="text-[9px] text-ableton-muted block text-center truncate">{t.name}</span>
+                         </button>
+                     ))}
                    </div>
-                   <p className="text-[10px] text-ableton-muted">Additional settings coming soon.</p>
+                </div>
+
+                <div className="space-y-3">
+                   <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-wider">Assistant Personality</h3>
+                   <div className="bg-ableton-panel p-4 rounded border border-ableton-border space-y-4">
+                       
+                       {/* 1. Detail Level */}
+                       <div className="space-y-1">
+                           <label className="text-[10px] text-ableton-muted uppercase">Expertise Level</label>
+                           <select 
+                              value={preferences.detailLevel}
+                              onChange={(e) => setPreferences(prev => ({...prev, detailLevel: e.target.value as any}))}
+                              className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-xs text-ableton-text"
+                            >
+                               <option value="beginner">Beginner (Detailed explanations)</option>
+                               <option value="intermediate">Intermediate (Balanced)</option>
+                               <option value="expert">Expert (Concise, technical)</option>
+                           </select>
+                       </div>
+
+                       {/* 2. Device Suite */}
+                       <div className="space-y-1">
+                           <label className="text-[10px] text-ableton-muted uppercase">Device Restrictions</label>
+                           <select 
+                              value={preferences.deviceSuite}
+                              onChange={(e) => setPreferences(prev => ({...prev, deviceSuite: e.target.value as any}))}
+                              className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-xs text-ableton-text"
+                            >
+                               <option value="stock">Stock Devices Only</option>
+                               <option value="m4l">Allow Max for Live</option>
+                           </select>
+                       </div>
+
+                       {/* 3. Creativity */}
+                       <div className="space-y-1">
+                           <label className="text-[10px] text-ableton-muted uppercase">Creativity Mode</label>
+                           <select 
+                              value={preferences.creativity}
+                              onChange={(e) => setPreferences(prev => ({...prev, creativity: e.target.value as any}))}
+                              className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-xs text-ableton-text"
+                            >
+                               <option value="standard">Standard Techniques</option>
+                               <option value="experimental">Experimental / Sound Design</option>
+                           </select>
+                       </div>
+
+                        {/* 4. OS */}
+                       <div className="space-y-1">
+                           <label className="text-[10px] text-ableton-muted uppercase">Operating System</label>
+                           <div className="flex bg-ableton-base rounded p-1 border border-ableton-border">
+                               <button 
+                                 onClick={() => setPreferences(p => ({...p, os: 'mac'}))}
+                                 className={`flex-1 text-[10px] py-1 rounded ${preferences.os === 'mac' ? 'bg-ableton-panel text-ableton-text' : 'text-ableton-muted'}`}
+                               >macOS</button>
+                               <button 
+                                 onClick={() => setPreferences(p => ({...p, os: 'windows'}))}
+                                 className={`flex-1 text-[10px] py-1 rounded ${preferences.os === 'windows' ? 'bg-ableton-panel text-ableton-text' : 'text-ableton-muted'}`}
+                               >Windows</button>
+                           </div>
+                       </div>
+
+                       {/* 5. Live Version */}
+                        <div className="space-y-1">
+                           <label className="text-[10px] text-ableton-muted uppercase">Target Version</label>
+                           <select 
+                              value={preferences.liveVersion}
+                              onChange={(e) => setPreferences(prev => ({...prev, liveVersion: e.target.value as any}))}
+                              className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-xs text-ableton-text"
+                            >
+                               <option value="12">Live 12</option>
+                               <option value="11">Live 11</option>
+                           </select>
+                       </div>
+
+                       {/* 6. Genre Context */}
+                       <div className="space-y-1">
+                           <label className="text-[10px] text-ableton-muted uppercase">Musical Context</label>
+                           <select 
+                              value={preferences.genre}
+                              onChange={(e) => setPreferences(prev => ({...prev, genre: e.target.value as any}))}
+                              className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-xs text-ableton-text"
+                            >
+                               <option value="general">General / No Specific Genre</option>
+                               <option value="techno">Techno</option>
+                               <option value="house">House</option>
+                               <option value="hiphop">Hip Hop / Trap</option>
+                               <option value="ambient">Ambient / Cinematic</option>
+                           </select>
+                       </div>
+
+                       {/* 7. Tone */}
+                       <div className="space-y-1">
+                           <label className="text-[10px] text-ableton-muted uppercase">Tone</label>
+                           <select 
+                              value={preferences.tone}
+                              onChange={(e) => setPreferences(prev => ({...prev, tone: e.target.value as any}))}
+                              className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-xs text-ableton-text"
+                            >
+                               <option value="encouraging">Encouraging & Helpful</option>
+                               <option value="professional">Professional & Direct</option>
+                               <option value="technical">Highly Technical</option>
+                           </select>
+                       </div>
+
+                        {/* 8. Output Length */}
+                       <div className="space-y-1">
+                           <label className="text-[10px] text-ableton-muted uppercase">Default Length</label>
+                           <select 
+                              value={preferences.outputLength}
+                              onChange={(e) => setPreferences(prev => ({...prev, outputLength: e.target.value as any}))}
+                              className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-xs text-ableton-text"
+                            >
+                               <option value="concise">Short / Concise</option>
+                               <option value="balanced">Balanced</option>
+                               <option value="detailed">Long / Detailed</option>
+                           </select>
+                       </div>
+
+                        {/* 9. Format */}
+                       <div className="space-y-1">
+                           <label className="text-[10px] text-ableton-muted uppercase">Output Format</label>
+                           <select 
+                              value={preferences.format}
+                              onChange={(e) => setPreferences(prev => ({...prev, format: e.target.value as any}))}
+                              className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-xs text-ableton-text"
+                            >
+                               <option value="steps">Step-by-Step Guide</option>
+                               <option value="paragraphs">Paragraphs</option>
+                               <option value="bullet_points">Bullet Points</option>
+                           </select>
+                       </div>
+
+                       {/* Switches for Toggles */}
+                       <div className="space-y-2 pt-2 border-t border-ableton-border">
+                          <Switch 
+                            checked={preferences.useEmojis} 
+                            onChange={(c) => setPreferences(p => ({...p, useEmojis: c}))} 
+                            label="Use Emojis 🎛️"
+                            className="scale-90 origin-left"
+                          />
+                          <Switch 
+                            checked={preferences.useAnalogies} 
+                            onChange={(c) => setPreferences(p => ({...p, useAnalogies: c}))} 
+                            label="Use Analogies"
+                            className="scale-90 origin-left"
+                          />
+                          <Switch 
+                            checked={preferences.showShortcuts} 
+                            onChange={(c) => setPreferences(p => ({...p, showShortcuts: c}))} 
+                            label="Show Keyboard Shortcuts"
+                            className="scale-90 origin-left"
+                          />
+                          <Switch 
+                            checked={preferences.includeTroubleshooting} 
+                            onChange={(c) => setPreferences(p => ({...p, includeTroubleshooting: c}))} 
+                            label="Include Troubleshooting Tips"
+                            className="scale-90 origin-left"
+                          />
+                       </div>
+
+                   </div>
                 </div>
              </div>
           )}
@@ -498,37 +772,43 @@ const App: React.FC = () => {
            {!response && !isGenerating && !responseImage && (
              <div className="max-w-4xl mx-auto space-y-8">
                 
-                {/* Techno Section */}
+                {/* Workflow Section */}
                 <div>
-                  <p className="text-center text-ableton-muted mb-4 uppercase tracking-widest text-xs font-bold">Techno Styles</p>
-                  <div className="flex flex-wrap justify-center gap-3">
-                    {technoGenres.map((g, i) => (
+                   <p className="text-center text-ableton-muted mb-4 uppercase tracking-widest text-xs font-bold">Techno Workflows</p>
+                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {technoWorkflows.map((s, i) => (
                       <button 
                         key={i} 
-                        onClick={() => { setPrompt(g.prompt); handleGenerate(g.prompt); }}
-                        className="px-4 py-3 bg-ableton-panel border border-ableton-border hover:border-ableton-accent hover:bg-ableton-surface transition-all rounded-sm text-sm text-ableton-text shadow-sm"
+                        onClick={() => { setPrompt(s.prompt); handleGenerate(s.prompt); }}
+                        className="text-left p-4 bg-ableton-panel border border-ableton-border hover:border-ableton-accent/50 hover:bg-ableton-surface transition-all rounded-sm text-sm text-ableton-text shadow-sm opacity-80 hover:opacity-100 flex flex-col gap-2"
                       >
-                        {g.label}
+                        <span className="font-bold text-ableton-accent">{s.label}</span>
+                        <span className="text-xs text-ableton-muted leading-snug">{s.prompt}</span>
                       </button>
                     ))}
                   </div>
                 </div>
 
-                {/* General Suggestions */}
+                {/* Advanced Features Section */}
                 <div>
-                   <p className="text-center text-ableton-muted mb-4 uppercase tracking-widest text-xs font-bold">Live 12 Features & Workflows</p>
-                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {quickTips.map((s, i) => (
+                   <p className="text-center text-ableton-muted mb-4 uppercase tracking-widest text-xs font-bold">Advanced Features</p>
+                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {advancedWorkflows.map((s, i) => (
                       <button 
                         key={i} 
-                        onClick={() => { setPrompt(s); handleGenerate(s); }}
-                        className="text-left p-4 bg-ableton-panel border border-ableton-border hover:border-ableton-accent/50 hover:bg-ableton-surface transition-all rounded-sm text-sm text-ableton-text shadow-sm opacity-80 hover:opacity-100"
+                        onClick={() => { setPrompt(s.prompt); handleGenerate(s.prompt); }}
+                        className="text-left p-4 bg-ableton-panel border border-ableton-border hover:border-ableton-accent/50 hover:bg-ableton-surface transition-all rounded-sm text-sm text-ableton-text shadow-sm opacity-80 hover:opacity-100 flex flex-col gap-2 group"
                       >
-                        {s}
+                         <div className="flex items-center gap-2">
+                             <span className="w-2 h-2 rounded-full bg-ableton-yellow group-hover:animate-pulse"></span>
+                             <span className="font-bold text-ableton-text group-hover:text-ableton-accent transition-colors">{s.label}</span>
+                         </div>
+                         <span className="text-xs text-ableton-muted leading-snug pl-4">{s.prompt}</span>
                       </button>
                     ))}
                   </div>
                 </div>
+
              </div>
            )}
 
@@ -561,6 +841,31 @@ const App: React.FC = () => {
         {/* Input Footer */}
         <div className="bg-ableton-surface border-t border-ableton-border p-4 flex-shrink-0 z-10 transition-colors duration-300">
           <div className="max-w-4xl mx-auto space-y-3">
+             
+             {/* Text Modifiers (Tiny Buttons) - Only show if there is a lastPrompt and not generating */}
+             {lastPrompt && !isGenerating && (
+                <div className="flex gap-2 justify-center mb-1">
+                    <button 
+                        onClick={() => handleGenerate(lastPrompt, 'much_longer')}
+                        className="text-[10px] uppercase font-bold tracking-wider px-3 py-1 bg-ableton-panel hover:bg-ableton-accent hover:text-white text-ableton-muted rounded-full transition-colors border border-ableton-border"
+                    >
+                        Much Longer
+                    </button>
+                    <button 
+                        onClick={() => handleGenerate(lastPrompt, 'professional')}
+                        className="text-[10px] uppercase font-bold tracking-wider px-3 py-1 bg-ableton-panel hover:bg-ableton-accent hover:text-white text-ableton-muted rounded-full transition-colors border border-ableton-border"
+                    >
+                        Make Professional
+                    </button>
+                    <button 
+                        onClick={() => handleGenerate(lastPrompt, 'short')}
+                        className="text-[10px] uppercase font-bold tracking-wider px-3 py-1 bg-ableton-panel hover:bg-ableton-accent hover:text-white text-ableton-muted rounded-full transition-colors border border-ableton-border"
+                    >
+                        Short
+                    </button>
+                </div>
+             )}
+
              {/* Selected Image Preview */}
              {selectedImage && (
                  <div className="flex items-center gap-3 bg-ableton-base p-2 rounded border border-ableton-border w-fit">

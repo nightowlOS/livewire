@@ -32,6 +32,7 @@
     </script>
     <style>
       :root {
+        /* Default Dark (Live 11/12 Dark) */
         --color-base: #1a1a1a;
         --color-surface: #222222;
         --color-panel: #2a2a2a;
@@ -51,6 +52,61 @@
         --color-muted: #555555;
         --color-accent: #ff764d;
         --color-accent-hover: #ff5f30;
+      }
+
+      [data-theme="live9"] {
+        --color-base: #dcdcdc;
+        --color-surface: #c0c0c0;
+        --color-panel: #a0a0a0;
+        --color-border: #808080;
+        --color-text: #111111;
+        --color-muted: #444444;
+        --color-accent: #00a0ff; /* Live 9 Blue */
+        --color-accent-hover: #33b3ff;
+      }
+
+      [data-theme="vaporwave"] {
+        --color-base: #180d26;
+        --color-surface: #24123b;
+        --color-panel: #361a52;
+        --color-border: #4d2673;
+        --color-text: #ff99e6;
+        --color-muted: #a366ff;
+        --color-accent: #00f2ff; /* Cyan */
+        --color-accent-hover: #5cf7ff;
+      }
+
+      [data-theme="matrix"] {
+        --color-base: #000000;
+        --color-surface: #0a0a0a;
+        --color-panel: #111111;
+        --color-border: #003300;
+        --color-text: #00ff00;
+        --color-muted: #008f00;
+        --color-accent: #00ff00;
+        --color-accent-hover: #66ff66;
+      }
+
+      [data-theme="rust"] {
+        --color-base: #1c1917;
+        --color-surface: #292524;
+        --color-panel: #44403c;
+        --color-border: #57534e;
+        --color-text: #e7e5e4;
+        --color-muted: #a8a29e;
+        --color-accent: #ea580c; /* Orange-600 */
+        --color-accent-hover: #f97316;
+      }
+
+      [data-theme="ocean"] {
+        --color-base: #0f172a; /* Slate 900 */
+        --color-surface: #1e293b;
+        --color-panel: #334155;
+        --color-border: #475569;
+        --color-text: #e2e8f0;
+        --color-muted: #94a3b8;
+        --color-accent: #38bdf8; /* Sky 400 */
+        --color-accent-hover: #7dd3fc;
       }
 
       body {
