@@ -5,9 +5,17 @@ import { OutputDisplay } from './components/OutputDisplay';
 import { Switch } from './components/Switch';
 import { ChatMessage, Theme, SavedTemplate, UserPreferences, CustomTheme } from './types';
 
+// Icons
+const HistoryIcon = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+const TemplateIcon = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg>;
+const ConfigIcon = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
+const SendIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>;
+const MicIcon = ({ active }: { active: boolean }) => <svg className={`w-5 h-5 ${active ? 'animate-pulse text-red-500' : ''}`} fill={active ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>;
+const ImageIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2-2H6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>;
+
 const App: React.FC = () => {
   const [prompt, setPrompt] = useState('');
-  const [lastPrompt, setLastPrompt] = useState(''); // Store last prompt for regeneration modifiers
+  const [lastPrompt, setLastPrompt] = useState(''); 
   const [isGenerating, setIsGenerating] = useState(false);
   const [response, setResponse] = useState('');
   const [responseImage, setResponseImage] = useState<string | undefined>(undefined);
@@ -28,7 +36,6 @@ const App: React.FC = () => {
     } catch(e) { return [] }
   });
   
-  // New Theme Creation State
   const [isCreatingTheme, setIsCreatingTheme] = useState(false);
   const [newThemeDraft, setNewThemeDraft] = useState<CustomTheme['colors']>({
       base: '#1a1a1a',
@@ -45,7 +52,6 @@ const App: React.FC = () => {
   const [showHelp, setShowHelp] = useState(false);
   const [copied, setCopied] = useState(false);
   
-  // Preferences
   const [preferences, setPreferences] = useState<UserPreferences>({
       detailLevel: 'intermediate',
       deviceSuite: 'stock',
@@ -55,16 +61,11 @@ const App: React.FC = () => {
       genre: 'general',
       tone: 'encouraging',
       outputLength: 'balanced',
-      
-      // Default Granulars
       sentenceComplexity: 5,
       jargonLevel: 5,
       deviceExplanationDepth: 5,
-      
-      // Default MIDI
       midiComplexity: 5,
       midiMusicality: 8,
-
       useEmojis: true,
       useAnalogies: true,
       showShortcuts: true,
@@ -72,7 +73,6 @@ const App: React.FC = () => {
       includeTroubleshooting: false
   });
 
-  // Template States
   const [templates, setTemplates] = useState<SavedTemplate[]>(() => {
     try {
       const saved = localStorage.getItem('ableton-templates');
@@ -86,26 +86,27 @@ const App: React.FC = () => {
   const [newTemplateContent, setNewTemplateContent] = useState('');
   const [newTemplateCategory, setNewTemplateCategory] = useState('Workflow');
 
-  // Multi-modal state
   const [isRecording, setIsRecording] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null); // Base64
+  const [selectedImage, setSelectedImage] = useState<string | null>(null); 
   const [isEditMode, setIsEditMode] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
-  // Apply theme to document and persist
+  // Auto scroll
+  useEffect(() => {
+    if (response && bottomRef.current) {
+        bottomRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [response]);
+
   useEffect(() => {
     if (theme === 'custom') {
-       // Look for active custom theme? Logic to store active custom ID would be needed, 
-       // but for simplicity, let's assume if it's custom, we load the variables manually
-       // This part actually requires knowing WHICH custom theme is active. 
-       // For this implementation, selecting a custom theme will simply set the variables directly
-       // and set theme state to 'custom'.
+       // Logic to re-apply custom theme active logic could go here
     } else {
         document.documentElement.setAttribute('data-theme', theme);
-        // Clear custom properties if any
         document.documentElement.style.removeProperty('--color-base');
         document.documentElement.style.removeProperty('--color-surface');
         document.documentElement.style.removeProperty('--color-panel');
@@ -144,26 +145,23 @@ const App: React.FC = () => {
     setNewThemeName('');
   };
 
-  // Save templates to local storage
   useEffect(() => {
     localStorage.setItem('ableton-templates', JSON.stringify(templates));
   }, [templates]);
 
-  // Specific Techno Workflows
   const technoWorkflows = [
-    { label: "Kick Rumble Generator", prompt: "Create a detailed chain for a Techno Rumble Kick using Hybrid Reverb and Roar. Explain macro mappings for decay and distortion." },
-    { label: "Polymetric Sequencer", prompt: "Explain how to set up a polymetric techno sequence using the new Live 12 MIDI Tools, mixing 4/4 kicks with 3/16 synth lines." },
-    { label: "Dub Techno Chord Rack", prompt: "Design a classic Dub Techno chord rack using Analog, Echo, and Auto Filter. Focus on texture and feedback loops." },
-    { label: "Industrial Distortion Bus", prompt: "Create an industrial techno drum bus processing chain using Roar in Multiband mode and Drum Buss." },
-    { label: "Hypnotic Bleep Loop", prompt: "Show me a workflow to generate hypnotic, evolving bleep loops using Note Echo, Random, and Scale Awareness." },
-    { label: "Hardgroove Percussion", prompt: "Create a processing chain for 90s Hardgroove loops using Vocoder (noise mode) and Overdrive to add texture." }
+    { label: "Kick Rumble", icon: "🥁", prompt: "Create a detailed chain for a Techno Rumble Kick using Hybrid Reverb and Roar. Explain macro mappings for decay and distortion." },
+    { label: "Polymetric Seq", icon: "🎼", prompt: "Explain how to set up a polymetric techno sequence using the new Live 12 MIDI Tools, mixing 4/4 kicks with 3/16 synth lines." },
+    { label: "Dub Chords", icon: "🎹", prompt: "Design a classic Dub Techno chord rack using Analog, Echo, and Auto Filter. Focus on texture and feedback loops." },
+    { label: "Indus. Distortion", icon: "🏭", prompt: "Create an industrial techno drum bus processing chain using Roar in Multiband mode and Drum Buss." },
+    { label: "Hypnotic Bleeps", icon: "🌀", prompt: "Show me a workflow to generate hypnotic, evolving bleep loops using Note Echo, Random, and Scale Awareness." },
+    { label: "Hardgroove", icon: "🔥", prompt: "Create a processing chain for 90s Hardgroove loops using Vocoder (noise mode) and Overdrive to add texture." }
   ];
 
-  // Advanced Feature Prompts
   const advancedWorkflows = [
-    { label: "REX & Slicing Masterclass", prompt: "Explain how to use 'Slice to New MIDI Track' to recreate the REX file workflow. Discuss preserving transients in Simpler." },
-    { label: "Stem Separation Remixing", prompt: "Provide a step-by-step guide on using Ableton Live 12's Stem Separation feature to isolate vocals, drums, bass, or other instruments from an audio clip. Include tips for cleaning up artifacts." },
-    { label: "Generative MIDI Tools", prompt: "Explain how to use Ableton Live 12's new MIDI Clip view features like 'Seed', 'Rhythm', and 'Shape' to generate melodic patterns. Also, detail how to use 'Scale Awareness' for musical results." }
+    { label: "REX Slicing", icon: "✂️", prompt: "Explain how to use 'Slice to New MIDI Track' to recreate the REX file workflow. Discuss preserving transients in Simpler." },
+    { label: "Stem Remixing", icon: "🎤", prompt: "Provide a step-by-step guide on using Ableton Live 12's Stem Separation feature to isolate vocals, drums, bass, or other instruments from an audio clip. Include tips for cleaning up artifacts." },
+    { label: "Generative MIDI", icon: "🤖", prompt: "Explain how to use Ableton Live 12's new MIDI Clip view features like 'Seed', 'Rhythm', and 'Shape' to generate melodic patterns. Also, detail how to use 'Scale Awareness' for musical results." }
   ];
 
   const applyConfigPreset = (preset: string) => {
@@ -222,7 +220,6 @@ const App: React.FC = () => {
     const activePrompt = textToUse || prompt;
     if (!activePrompt.trim() && !selectedImage) return;
 
-    // Determine config overrides based on modifier
     let tempPrefs = { ...preferences };
     let extraInstruction = "";
 
@@ -244,13 +241,10 @@ const App: React.FC = () => {
     setIsGenerating(true);
     setResponse('');
     setResponseImage(undefined);
-    setLastPrompt(activePrompt); // Save for re-runs
+    setLastPrompt(activePrompt);
 
-    // Contextualize prompt with preferences
     const contextPrompt = `${activePrompt} 
-    
     ${extraInstruction ? `[IMPORTANT MODIFICATION]: ${extraInstruction}` : ''}
-
     [Configuration Constraints]:
     - Expertise Level: ${tempPrefs.detailLevel}
     - OS for Shortcuts: ${tempPrefs.os === 'mac' ? 'macOS (Cmd, Opt)' : 'Windows (Ctrl, Alt)'}
@@ -265,12 +259,10 @@ const App: React.FC = () => {
     - Creativity Mode: ${tempPrefs.creativity === 'experimental' ? 'Suggest unconventional signal routing and weird sound design tricks.' : 'Stick to standard, reliable industry techniques.'}
     - Show Shortcuts: ${tempPrefs.showShortcuts ? 'Yes' : 'No'}
     - Troubleshooting: ${tempPrefs.includeTroubleshooting ? 'Include common pitfalls' : 'No'}
-    
     [Style Fine-Tuning (1-10)]:
     - Sentence Complexity: ${tempPrefs.sentenceComplexity}/10
     - Technical Jargon: ${tempPrefs.jargonLevel}/10
     - Device Explanation Depth: ${tempPrefs.deviceExplanationDepth}/10
-    
     [MIDI Generation Settings (1-10)]:
     - MIDI Pattern Complexity: ${tempPrefs.midiComplexity}/10
     - MIDI Musicality/Scale Adherence: ${tempPrefs.midiMusicality}/10
@@ -287,44 +279,23 @@ const App: React.FC = () => {
 
     try {
       if (selectedImage && isEditMode) {
-        // Image Editing Flow
         const newImageBase64 = await editImage(selectedImage, contextPrompt);
         setResponseImage(newImageBase64);
         setResponse("Here is your edited image based on the prompt.");
-
-        const modelMsg: ChatMessage = {
-            id: (Date.now() + 1).toString(),
-            role: 'model',
-            text: "Here is your edited image based on the prompt.",
-            imageUrl: newImageBase64,
-            timestamp: Date.now()
-        };
-        setHistory(prev => [modelMsg, ...prev]);
-
+        setHistory(prev => [{ id: (Date.now() + 1).toString(), role: 'model', text: "Here is your edited image based on the prompt.", imageUrl: newImageBase64, timestamp: Date.now() }, ...prev]);
       } else {
-        // Text Generation / Image Analysis Flow
         let accumulatedResponse = "";
         await generateAbletonGuideStream(contextPrompt, selectedImage, (chunk) => {
           accumulatedResponse += chunk;
           setResponse(accumulatedResponse);
         });
-        
-        const modelMsg: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          role: 'model',
-          text: accumulatedResponse,
-          timestamp: Date.now()
-        };
-        setHistory(prev => [modelMsg, ...prev]);
+        setHistory(prev => [{ id: (Date.now() + 1).toString(), role: 'model', text: accumulatedResponse, timestamp: Date.now() }, ...prev]);
       }
-      
-      // Clear inputs after success
       setPrompt('');
       if (!modifier) {
           setSelectedImage(null);
           setIsEditMode(false);
       }
-
     } catch (error) {
       console.error("Failed to generate", error);
       setResponse("**Error:** Failed to process request. Please check your connection or API key.");
@@ -341,13 +312,11 @@ const App: React.FC = () => {
       audioChunksRef.current = [];
 
       mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
       };
 
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' }); // or webm
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
         const reader = new FileReader();
         reader.readAsDataURL(audioBlob);
         reader.onloadend = async () => {
@@ -363,10 +332,8 @@ const App: React.FC = () => {
                 setIsGenerating(false);
             }
         };
-        // Stop all tracks to release microphone
         stream.getTracks().forEach(track => track.stop());
       };
-
       mediaRecorder.start();
       setIsRecording(true);
     } catch (err) {
@@ -441,7 +408,7 @@ const App: React.FC = () => {
   const loadTemplate = (template: SavedTemplate) => {
     setResponse(template.content);
     setResponseImage(undefined);
-    setShowHistory(false); // Close sidebar on mobile
+    setShowHistory(false);
   };
 
   const handleExport = () => {
@@ -478,71 +445,57 @@ const App: React.FC = () => {
       { id: 'ocean', name: 'Deep Ocean', color: '#0f172a' },
   ];
 
+  const SidebarTabButton = ({ id, icon: Icon, label }: { id: typeof activeTab, icon: React.FC<any>, label: string }) => (
+    <button 
+      onClick={() => setActiveTab(id)}
+      className={`flex-1 py-4 flex flex-col items-center justify-center gap-1 transition-all duration-200 border-b-2 ${activeTab === id ? 'border-ableton-accent text-ableton-text bg-ableton-panel/50' : 'border-transparent text-ableton-muted hover:text-ableton-text hover:bg-ableton-panel/30'}`}
+    >
+        <Icon />
+        <span className="text-[10px] uppercase font-bold tracking-wider">{label}</span>
+    </button>
+  );
+
   return (
-    <div className="min-h-screen bg-ableton-base text-ableton-text font-sans selection:bg-ableton-accent selection:text-white flex flex-col md:flex-row overflow-hidden transition-colors duration-300">
+    <div className="h-screen bg-ableton-base text-ableton-text font-sans flex flex-col md:flex-row overflow-hidden transition-colors duration-300">
       
       {/* Help Modal */}
       {showHelp && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-           <div className="bg-ableton-surface border border-ableton-border shadow-2xl rounded-lg max-w-lg w-full p-6 relative">
+           <div className="bg-ableton-surface border border-ableton-border shadow-2xl rounded-xl max-w-lg w-full p-6 relative">
               <button onClick={() => setShowHelp(false)} className="absolute top-4 right-4 text-ableton-muted hover:text-ableton-text">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
-              <h2 className="text-xl font-bold text-ableton-accent mb-4">How to use LiveWire</h2>
+              <h2 className="text-xl font-bold text-ableton-accent mb-4">LiveWire Assistant Guide</h2>
               <div className="space-y-3 text-sm text-ableton-text">
-                <p><strong>1. Text Prompts:</strong> Ask for sound design recipes (e.g., "Create a dubstep wobble bass").</p>
-                <p><strong>2. Audio Input:</strong> Click the mic to speak your request or record a sound to describe.</p>
-                <p><strong>3. Image Analysis:</strong> Upload a screenshot of a plugin or VST and ask "What is this setting?"</p>
-                <p><strong>4. Image Editing:</strong> Upload an image, check "Edit Mode", and prompt to modify it (e.g., "Make it cyberpunk").</p>
-                <p><strong>5. Templates:</strong> Save your favorite generated guides as templates to recall later.</p>
+                <p><strong>1. Prompting:</strong> Describe a sound or workflow. Use the "Quick Workflows" for instant results.</p>
+                <p><strong>2. Audio/Image:</strong> Use the mic to ask questions or upload a screenshot of a device to get an explanation.</p>
+                <p><strong>3. Config:</strong> Tune the AI's personality in the Config tab. Use "The Purist" for strict manuals.</p>
+                <p><strong>4. Templates:</strong> Save useful responses to build your own library of techniques.</p>
               </div>
            </div>
         </div>
       )}
 
-      {/* Save Template Modal */}
+      {/* Save Modal */}
       {showSaveModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-           <div className="bg-ableton-surface border border-ableton-border shadow-2xl rounded-lg max-w-2xl w-full p-6 flex flex-col max-h-[90vh]">
+           <div className="bg-ableton-surface border border-ableton-border shadow-2xl rounded-xl max-w-2xl w-full p-6 flex flex-col max-h-[90vh]">
               <h3 className="text-lg font-bold text-ableton-text mb-4">Save Template</h3>
-              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div className="space-y-1">
                       <label className="text-xs text-ableton-muted uppercase tracking-wider font-bold">Template Name</label>
-                      <input 
-                        type="text" 
-                        autoFocus
-                        placeholder="e.g. Techno Rumble Chain" 
-                        value={newTemplateName}
-                        onChange={(e) => setNewTemplateName(e.target.value)}
-                        className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-ableton-text focus:outline-none focus:border-ableton-accent"
-                      />
+                      <input type="text" autoFocus value={newTemplateName} onChange={(e) => setNewTemplateName(e.target.value)} className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-ableton-text focus:border-ableton-accent outline-none" placeholder="e.g. Techno Rumble" />
                   </div>
                   <div className="space-y-1">
                       <label className="text-xs text-ableton-muted uppercase tracking-wider font-bold">Category</label>
-                      <select 
-                        value={newTemplateCategory}
-                        onChange={(e) => setNewTemplateCategory(e.target.value)}
-                        className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-ableton-text focus:outline-none focus:border-ableton-accent"
-                      >
+                      <select value={newTemplateCategory} onChange={(e) => setNewTemplateCategory(e.target.value)} className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-ableton-text focus:border-ableton-accent outline-none">
                           <option value="Workflow">Workflow</option>
                           <option value="Effect Rack">Effect Rack</option>
                           <option value="Sound Design">Sound Design</option>
-                          <option value="Project Setup">Project Setup</option>
-                          <option value="Other">Other</option>
                       </select>
                   </div>
               </div>
-
-              <div className="flex-1 min-h-[200px] mb-4 flex flex-col space-y-1">
-                 <label className="text-xs text-ableton-muted uppercase tracking-wider font-bold">Template Content (Editable)</label>
-                 <textarea 
-                    value={newTemplateContent}
-                    onChange={(e) => setNewTemplateContent(e.target.value)}
-                    className="flex-1 w-full bg-ableton-base border border-ableton-border rounded p-3 text-ableton-text font-mono text-xs focus:outline-none focus:border-ableton-accent resize-none leading-relaxed"
-                 />
-              </div>
-
+              <textarea value={newTemplateContent} onChange={(e) => setNewTemplateContent(e.target.value)} className="flex-1 w-full bg-ableton-base border border-ableton-border rounded p-3 text-ableton-text font-mono text-xs focus:border-ableton-accent outline-none resize-none mb-4 min-h-[200px]" />
               <div className="flex justify-end gap-3">
                 <Button variant="secondary" onClick={() => setShowSaveModal(false)}>Cancel</Button>
                 <Button onClick={saveTemplate} disabled={!newTemplateName.trim()}>Save Template</Button>
@@ -551,632 +504,254 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Sidebar (History & Config) */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-ableton-surface border-r border-ableton-border transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${showHistory ? 'translate-x-0' : '-translate-x-full'} flex flex-col`}>
-        
-        {/* Sidebar Header/Tabs */}
-        <div className="p-0 border-b border-ableton-border grid grid-cols-3">
-           <button 
-             onClick={() => setActiveTab('history')}
-             className={`p-3 text-[10px] font-bold uppercase tracking-wider transition-colors truncate ${activeTab === 'history' ? 'bg-ableton-base text-ableton-accent border-b-2 border-ableton-accent' : 'text-ableton-muted hover:text-ableton-text'}`}
-           >
-             History
-           </button>
-           <button 
-             onClick={() => setActiveTab('templates')}
-             className={`p-3 text-[10px] font-bold uppercase tracking-wider transition-colors truncate ${activeTab === 'templates' ? 'bg-ableton-base text-ableton-accent border-b-2 border-ableton-accent' : 'text-ableton-muted hover:text-ableton-text'}`}
-           >
-             Templates
-           </button>
-           <button 
-             onClick={() => setActiveTab('config')}
-             className={`p-3 text-[10px] font-bold uppercase tracking-wider transition-colors truncate ${activeTab === 'config' ? 'bg-ableton-base text-ableton-accent border-b-2 border-ableton-accent' : 'text-ableton-muted hover:text-ableton-text'}`}
-           >
-             Config
-           </button>
+      {/* Sidebar */}
+      <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-ableton-surface border-r border-ableton-border transform transition-transform duration-300 md:relative md:translate-x-0 ${showHistory ? 'translate-x-0' : '-translate-x-full'} flex flex-col shadow-2xl md:shadow-none`}>
+        <div className="flex bg-ableton-base/50">
+           <SidebarTabButton id="history" icon={HistoryIcon} label="History" />
+           <SidebarTabButton id="templates" icon={TemplateIcon} label="Templates" />
+           <SidebarTabButton id="config" icon={ConfigIcon} label="Config" />
         </div>
 
-        <button onClick={() => setShowHistory(false)} className="md:hidden absolute top-3 right-3 text-ableton-muted">
-           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+        <button onClick={() => setShowHistory(false)} className="md:hidden absolute top-3 right-3 text-ableton-muted p-2 rounded-full hover:bg-ableton-panel">
+           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
 
-        {/* Tab Content */}
-        <div className="flex-1 overflow-y-auto p-2">
+        <div className="flex-1 overflow-y-auto p-3 scrollbar-hide">
           {activeTab === 'history' && (
              <div className="space-y-2">
                 {history.filter(h => h.role === 'user').map((item) => (
-                  <div 
-                    key={item.id} 
-                    onClick={() => loadFromHistory(item)}
-                    className="p-3 rounded bg-ableton-panel hover:bg-ableton-border cursor-pointer transition-colors text-xs border-l-2 border-transparent hover:border-ableton-accent truncate flex items-center justify-between"
-                  >
-                    <span className="truncate">{item.text || "(Image)"}</span>
-                    {item.imageUrl && (
-                        <svg className="w-3 h-3 text-ableton-muted flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                    )}
+                  <div key={item.id} onClick={() => loadFromHistory(item)} className="p-3 rounded-lg bg-ableton-panel hover:bg-ableton-border cursor-pointer transition-all border border-transparent hover:border-ableton-accent/30 group">
+                    <div className="flex justify-between items-center mb-1">
+                        <span className="text-[10px] text-ableton-muted font-mono">{new Date(item.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                        {item.imageUrl && <span className="text-[10px] bg-ableton-accent/20 text-ableton-accent px-1.5 py-0.5 rounded">IMG</span>}
+                    </div>
+                    <p className="text-sm truncate text-ableton-text group-hover:text-white">{item.text || "Image Analysis"}</p>
                   </div>
                 ))}
-                {history.length === 0 && (
-                  <div className="p-4 text-xs text-ableton-muted text-center italic mt-10">
-                    No generations yet.
-                  </div>
-                )}
+                {history.length === 0 && <div className="p-8 text-center text-ableton-muted text-sm italic opacity-50">No history yet.</div>}
              </div>
           )}
 
           {activeTab === 'templates' && (
             <div className="space-y-2">
-               {templates.length > 0 ? templates.map((t) => (
-                 <div key={t.id} className="group bg-ableton-panel rounded p-3 border border-ableton-border hover:border-ableton-accent/50 transition-colors">
-                    <div onClick={() => loadTemplate(t)} className="cursor-pointer">
+               {templates.map((t) => (
+                 <div key={t.id} className="bg-ableton-panel rounded-lg p-3 border border-ableton-border hover:border-ableton-accent/50 transition-all group relative overflow-hidden">
+                    <div onClick={() => loadTemplate(t)} className="cursor-pointer relative z-10">
                       <div className="flex justify-between items-start">
                          <h4 className="text-sm font-semibold text-ableton-text group-hover:text-ableton-accent transition-colors truncate pr-2">{t.name}</h4>
-                         {t.category && <span className="text-[9px] uppercase tracking-wider bg-ableton-base px-1.5 py-0.5 rounded text-ableton-muted border border-ableton-border">{t.category}</span>}
+                         {t.category && <span className="text-[9px] uppercase tracking-wider bg-black/20 px-1.5 py-0.5 rounded text-ableton-muted">{t.category}</span>}
                       </div>
-                      <p className="text-[10px] text-ableton-muted mt-1">{new Date(t.createdAt).toLocaleDateString()}</p>
+                      <p className="text-[10px] text-ableton-muted mt-2 font-mono">ID: {t.id.slice(-4)}</p>
                     </div>
-                    <div className="flex justify-end mt-2 pt-2 border-t border-white/5">
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); deleteTemplate(t.id); }}
-                          className="text-xs text-ableton-muted hover:text-red-400 flex items-center gap-1"
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                          Delete
-                        </button>
-                    </div>
+                    <button onClick={(e) => { e.stopPropagation(); deleteTemplate(t.id); }} className="absolute bottom-2 right-2 text-ableton-muted hover:text-red-400 z-20 opacity-0 group-hover:opacity-100 transition-opacity p-1">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
                  </div>
-               )) : (
-                 <div className="p-4 text-xs text-ableton-muted text-center italic mt-10">
-                    No saved templates. Generate a recipe and save it here.
-                 </div>
-               )}
+               ))}
+               {templates.length === 0 && <div className="p-8 text-center text-ableton-muted text-sm italic opacity-50">No saved templates.</div>}
             </div>
           )}
 
           {activeTab === 'config' && (
-             <div className="p-4 space-y-8 pb-24">
-                
-                {/* 0. Smart Presets (Synthesized Configs) */}
-                <div className="space-y-3">
-                   <h3 className="text-xs font-bold text-ableton-accent uppercase tracking-wider">Quick Config Presets</h3>
-                   <div className="flex gap-2">
-                      <button onClick={() => applyConfigPreset('purist')} className="flex-1 bg-ableton-panel border border-ableton-border rounded px-2 py-2 text-[10px] hover:bg-ableton-surface hover:text-ableton-accent transition-colors">
-                        The Purist
-                      </button>
-                      <button onClick={() => applyConfigPreset('experimental')} className="flex-1 bg-ableton-panel border border-ableton-border rounded px-2 py-2 text-[10px] hover:bg-ableton-surface hover:text-ableton-accent transition-colors">
-                        Experimental
-                      </button>
-                      <button onClick={() => applyConfigPreset('beginner')} className="flex-1 bg-ableton-panel border border-ableton-border rounded px-2 py-2 text-[10px] hover:bg-ableton-surface hover:text-ableton-accent transition-colors">
-                        Beginner
-                      </button>
-                   </div>
-                </div>
-
-                {/* Granular Style Control */}
-                <div className="space-y-4 border-t border-ableton-border pt-4">
-                    <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-wider">Output Style Fine-Tuning</h3>
-                    
-                    <div className="space-y-3">
-                        <div className="space-y-1">
-                            <div className="flex justify-between text-[10px] text-ableton-muted uppercase">
-                                <span>Sentence Complexity</span>
-                                <span>{preferences.sentenceComplexity}/10</span>
-                            </div>
-                            <input 
-                                type="range" min="1" max="10" 
-                                value={preferences.sentenceComplexity}
-                                onChange={(e) => setPreferences({...preferences, sentenceComplexity: parseInt(e.target.value)})}
-                                className="w-full h-1 bg-ableton-panel rounded-lg appearance-none cursor-pointer accent-ableton-accent"
-                            />
-                        </div>
-
-                        <div className="space-y-1">
-                            <div className="flex justify-between text-[10px] text-ableton-muted uppercase">
-                                <span>Technical Jargon</span>
-                                <span>{preferences.jargonLevel}/10</span>
-                            </div>
-                            <input 
-                                type="range" min="1" max="10" 
-                                value={preferences.jargonLevel}
-                                onChange={(e) => setPreferences({...preferences, jargonLevel: parseInt(e.target.value)})}
-                                className="w-full h-1 bg-ableton-panel rounded-lg appearance-none cursor-pointer accent-ableton-accent"
-                            />
-                        </div>
-
-                        <div className="space-y-1">
-                            <div className="flex justify-between text-[10px] text-ableton-muted uppercase">
-                                <span>Device Depth</span>
-                                <span>{preferences.deviceExplanationDepth}/10</span>
-                            </div>
-                            <input 
-                                type="range" min="1" max="10" 
-                                value={preferences.deviceExplanationDepth}
-                                onChange={(e) => setPreferences({...preferences, deviceExplanationDepth: parseInt(e.target.value)})}
-                                className="w-full h-1 bg-ableton-panel rounded-lg appearance-none cursor-pointer accent-ableton-accent"
-                            />
-                        </div>
-                    </div>
-                </div>
-
-                {/* MIDI Generator Section */}
-                <div className="space-y-4 border-t border-ableton-border pt-4">
-                     <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-wider flex items-center gap-2">
-                        <span>Generative MIDI Tools</span>
-                        <span className="text-[9px] bg-ableton-accent/20 text-ableton-accent px-1 rounded">Live 12</span>
-                     </h3>
-                     <div className="p-3 bg-ableton-panel rounded border border-ableton-border space-y-4">
-                        <div className="space-y-1">
-                             <div className="flex justify-between text-[10px] text-ableton-muted uppercase">
-                                <span>Pattern Complexity</span>
-                                <span>{preferences.midiComplexity}/10</span>
-                            </div>
-                            <input 
-                                type="range" min="1" max="10" 
-                                value={preferences.midiComplexity}
-                                onChange={(e) => setPreferences({...preferences, midiComplexity: parseInt(e.target.value)})}
-                                className="w-full h-1 bg-ableton-base rounded-lg appearance-none cursor-pointer accent-ableton-accent"
-                            />
-                        </div>
-                        <div className="space-y-1">
-                             <div className="flex justify-between text-[10px] text-ableton-muted uppercase">
-                                <span>Musicality / Scale Adherence</span>
-                                <span>{preferences.midiMusicality}/10</span>
-                            </div>
-                            <input 
-                                type="range" min="1" max="10" 
-                                value={preferences.midiMusicality}
-                                onChange={(e) => setPreferences({...preferences, midiMusicality: parseInt(e.target.value)})}
-                                className="w-full h-1 bg-ableton-base rounded-lg appearance-none cursor-pointer accent-ableton-accent"
-                            />
-                        </div>
-                     </div>
-                </div>
-
-                <div className="space-y-3 border-t border-ableton-border pt-4">
-                   <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-wider">Visual Theme</h3>
+             <div className="space-y-8 pb-10 px-1">
+                <section>
+                   <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-widest mb-3 pl-1">Preset Modes</h3>
                    <div className="grid grid-cols-3 gap-2">
-                     {availableThemes.map(t => (
-                         <button
-                           key={t.id}
-                           onClick={() => setTheme(t.id)}
-                           className={`p-1 rounded border transition-all ${theme === t.id ? 'border-ableton-accent bg-ableton-panel' : 'border-transparent hover:bg-ableton-panel'}`}
-                           title={t.name}
-                         >
-                            <div className="w-full h-8 rounded mb-1" style={{backgroundColor: t.color}}></div>
-                            <span className="text-[9px] text-ableton-muted block text-center truncate">{t.name}</span>
-                         </button>
-                     ))}
-                     {customThemes.map(t => (
-                         <button
-                           key={t.id}
-                           onClick={() => applyCustomTheme(t)}
-                           className={`p-1 rounded border transition-all ${theme === 'custom' && document.documentElement.style.getPropertyValue('--color-base') === t.colors.base ? 'border-ableton-accent bg-ableton-panel' : 'border-transparent hover:bg-ableton-panel'}`}
-                           title={t.name}
-                         >
-                             <div className="w-full h-8 rounded mb-1 border border-white/10" style={{backgroundColor: t.colors.base}}>
-                                 <div className="w-full h-1/2" style={{backgroundColor: t.colors.accent}}></div>
-                             </div>
-                            <span className="text-[9px] text-ableton-muted block text-center truncate">{t.name}</span>
-                         </button>
-                     ))}
-                     <button
-                        onClick={() => setIsCreatingTheme(!isCreatingTheme)}
-                        className="p-1 rounded border border-dashed border-ableton-muted hover:border-ableton-accent hover:text-ableton-accent text-ableton-muted flex flex-col items-center justify-center h-[54px]"
-                     >
-                        <span className="text-lg font-bold">+</span>
-                        <span className="text-[9px]">Custom</span>
-                     </button>
+                      {['Purist', 'Experimental', 'Beginner'].map(mode => (
+                          <button key={mode} onClick={() => applyConfigPreset(mode.toLowerCase())} className="bg-ableton-panel border border-ableton-border rounded-md py-2 text-[10px] font-bold uppercase hover:bg-ableton-accent hover:text-white hover:border-transparent transition-all">
+                            {mode}
+                          </button>
+                      ))}
                    </div>
-                   
-                   {/* Custom Theme Creator */}
+                </section>
+
+                <section>
+                    <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-widest mb-3 pl-1">Response Style</h3>
+                    <div className="space-y-4 bg-ableton-panel p-4 rounded-lg border border-ableton-border">
+                        {[
+                            { label: 'Complexity', key: 'sentenceComplexity' },
+                            { label: 'Jargon', key: 'jargonLevel' },
+                            { label: 'Depth', key: 'deviceExplanationDepth' }
+                        ].map((item) => (
+                            <div key={item.key} className="space-y-1">
+                                <div className="flex justify-between text-[10px] text-ableton-muted uppercase font-bold">
+                                    <span>{item.label}</span>
+                                    <span className="text-ableton-accent">{(preferences as any)[item.key]}/10</span>
+                                </div>
+                                <input type="range" min="1" max="10" value={(preferences as any)[item.key]} onChange={(e) => setPreferences({...preferences, [item.key]: parseInt(e.target.value)})} className="w-full h-1.5 bg-ableton-base rounded-full appearance-none cursor-pointer accent-ableton-accent" />
+                            </div>
+                        ))}
+                    </div>
+                </section>
+
+                <section>
+                    <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-widest mb-3 pl-1 flex items-center justify-between">
+                        <span>MIDI Generators</span>
+                        <span className="text-[9px] bg-ableton-accent px-1.5 rounded text-white">v12</span>
+                    </h3>
+                    <div className="space-y-4 bg-ableton-panel p-4 rounded-lg border border-ableton-border">
+                         {[
+                            { label: 'Pattern Chaos', key: 'midiComplexity' },
+                            { label: 'Musicality', key: 'midiMusicality' }
+                        ].map((item) => (
+                            <div key={item.key} className="space-y-1">
+                                <div className="flex justify-between text-[10px] text-ableton-muted uppercase font-bold">
+                                    <span>{item.label}</span>
+                                    <span className="text-ableton-accent">{(preferences as any)[item.key]}/10</span>
+                                </div>
+                                <input type="range" min="1" max="10" value={(preferences as any)[item.key]} onChange={(e) => setPreferences({...preferences, [item.key]: parseInt(e.target.value)})} className="w-full h-1.5 bg-ableton-base rounded-full appearance-none cursor-pointer accent-ableton-accent" />
+                            </div>
+                        ))}
+                    </div>
+                </section>
+                
+                <section>
+                   <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-widest mb-3 pl-1">Themes</h3>
+                   <div className="grid grid-cols-4 gap-2">
+                     {availableThemes.map(t => (
+                         <button key={t.id} onClick={() => setTheme(t.id)} className={`h-8 rounded-md border-2 transition-all ${theme === t.id ? 'border-ableton-accent scale-105' : 'border-transparent hover:scale-105'}`} style={{backgroundColor: t.color}} title={t.name} />
+                     ))}
+                     <button onClick={() => setIsCreatingTheme(!isCreatingTheme)} className="h-8 rounded-md border-2 border-dashed border-ableton-muted flex items-center justify-center text-ableton-muted hover:text-ableton-accent hover:border-ableton-accent transition-all">+</button>
+                   </div>
                    {isCreatingTheme && (
-                       <div className="mt-4 p-3 bg-ableton-panel rounded border border-ableton-border space-y-3 animate-in fade-in slide-in-from-top-2">
-                           <input 
-                              type="text" 
-                              placeholder="Theme Name"
-                              value={newThemeName}
-                              onChange={(e) => setNewThemeName(e.target.value)}
-                              className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-xs text-ableton-text mb-2"
-                           />
-                           <div className="grid grid-cols-2 gap-2">
-                               <div className="space-y-1">
-                                   <label className="text-[9px] text-ableton-muted uppercase">Base (Bg)</label>
-                                   <div className="flex gap-2">
-                                     <input type="color" value={newThemeDraft.base} onChange={e => setNewThemeDraft({...newThemeDraft, base: e.target.value})} className="h-6 w-8 bg-transparent cursor-pointer" />
-                                     <input type="text" value={newThemeDraft.base} onChange={e => setNewThemeDraft({...newThemeDraft, base: e.target.value})} className="w-full text-[10px] bg-ableton-base border-none rounded px-1" />
+                       <div className="mt-4 p-3 bg-ableton-panel rounded-lg border border-ableton-border space-y-3">
+                           <input type="text" placeholder="Theme Name" value={newThemeName} onChange={(e) => setNewThemeName(e.target.value)} className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-xs text-ableton-text outline-none focus:border-ableton-accent" />
+                           <div className="grid grid-cols-4 gap-2">
+                               {['base', 'surface', 'text', 'accent'].map(k => (
+                                   <div key={k} className="flex flex-col gap-1">
+                                       <label className="text-[9px] uppercase text-ableton-muted">{k}</label>
+                                       <input type="color" value={(newThemeDraft as any)[k]} onChange={e => setNewThemeDraft({...newThemeDraft, [k]: e.target.value})} className="w-full h-6 bg-transparent cursor-pointer rounded" />
                                    </div>
-                               </div>
-                               <div className="space-y-1">
-                                   <label className="text-[9px] text-ableton-muted uppercase">Accent</label>
-                                   <div className="flex gap-2">
-                                     <input type="color" value={newThemeDraft.accent} onChange={e => setNewThemeDraft({...newThemeDraft, accent: e.target.value})} className="h-6 w-8 bg-transparent cursor-pointer" />
-                                     <input type="text" value={newThemeDraft.accent} onChange={e => setNewThemeDraft({...newThemeDraft, accent: e.target.value})} className="w-full text-[10px] bg-ableton-base border-none rounded px-1" />
-                                   </div>
-                               </div>
-                               <div className="space-y-1">
-                                   <label className="text-[9px] text-ableton-muted uppercase">Text</label>
-                                   <div className="flex gap-2">
-                                     <input type="color" value={newThemeDraft.text} onChange={e => setNewThemeDraft({...newThemeDraft, text: e.target.value})} className="h-6 w-8 bg-transparent cursor-pointer" />
-                                     <input type="text" value={newThemeDraft.text} onChange={e => setNewThemeDraft({...newThemeDraft, text: e.target.value})} className="w-full text-[10px] bg-ableton-base border-none rounded px-1" />
-                                   </div>
-                               </div>
-                               <div className="space-y-1">
-                                   <label className="text-[9px] text-ableton-muted uppercase">Surface (Nav)</label>
-                                   <div className="flex gap-2">
-                                     <input type="color" value={newThemeDraft.surface} onChange={e => setNewThemeDraft({...newThemeDraft, surface: e.target.value})} className="h-6 w-8 bg-transparent cursor-pointer" />
-                                     <input type="text" value={newThemeDraft.surface} onChange={e => setNewThemeDraft({...newThemeDraft, surface: e.target.value})} className="w-full text-[10px] bg-ableton-base border-none rounded px-1" />
-                                   </div>
-                               </div>
+                               ))}
                            </div>
-                           <Button onClick={saveCustomTheme} disabled={!newThemeName} className="w-full mt-2 py-1 text-xs">Save Theme</Button>
+                           <Button onClick={saveCustomTheme} disabled={!newThemeName} className="w-full py-1 text-xs mt-2">Save</Button>
                        </div>
                    )}
-                </div>
-
-                <div className="space-y-3 border-t border-ableton-border pt-4">
-                   <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-wider">Assistant Personality</h3>
-                   <div className="bg-ableton-panel p-4 rounded border border-ableton-border space-y-4">
-                       
-                       {/* 1. Detail Level */}
-                       <div className="space-y-1">
-                           <label className="text-[10px] text-ableton-muted uppercase">Expertise Level</label>
-                           <select 
-                              value={preferences.detailLevel}
-                              onChange={(e) => setPreferences(prev => ({...prev, detailLevel: e.target.value as any}))}
-                              className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-xs text-ableton-text"
-                            >
-                               <option value="beginner">Beginner (Detailed explanations)</option>
-                               <option value="intermediate">Intermediate (Balanced)</option>
-                               <option value="expert">Expert (Concise, technical)</option>
-                           </select>
-                       </div>
-
-                       {/* 2. Device Suite */}
-                       <div className="space-y-1">
-                           <label className="text-[10px] text-ableton-muted uppercase">Device Restrictions</label>
-                           <select 
-                              value={preferences.deviceSuite}
-                              onChange={(e) => setPreferences(prev => ({...prev, deviceSuite: e.target.value as any}))}
-                              className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-xs text-ableton-text"
-                            >
-                               <option value="stock">Stock Devices Only</option>
-                               <option value="m4l">Allow Max for Live</option>
-                           </select>
-                       </div>
-
-                       {/* 3. Creativity */}
-                       <div className="space-y-1">
-                           <label className="text-[10px] text-ableton-muted uppercase">Creativity Mode</label>
-                           <select 
-                              value={preferences.creativity}
-                              onChange={(e) => setPreferences(prev => ({...prev, creativity: e.target.value as any}))}
-                              className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-xs text-ableton-text"
-                            >
-                               <option value="standard">Standard Techniques</option>
-                               <option value="experimental">Experimental / Sound Design</option>
-                           </select>
-                       </div>
-
-                        {/* 4. OS */}
-                       <div className="space-y-1">
-                           <label className="text-[10px] text-ableton-muted uppercase">Operating System</label>
-                           <div className="flex bg-ableton-base rounded p-1 border border-ableton-border">
-                               <button 
-                                 onClick={() => setPreferences(p => ({...p, os: 'mac'}))}
-                                 className={`flex-1 text-[10px] py-1 rounded ${preferences.os === 'mac' ? 'bg-ableton-panel text-ableton-text' : 'text-ableton-muted'}`}
-                               >macOS</button>
-                               <button 
-                                 onClick={() => setPreferences(p => ({...p, os: 'windows'}))}
-                                 className={`flex-1 text-[10px] py-1 rounded ${preferences.os === 'windows' ? 'bg-ableton-panel text-ableton-text' : 'text-ableton-muted'}`}
-                               >Windows</button>
-                           </div>
-                       </div>
-
-                       {/* 5. Live Version */}
-                        <div className="space-y-1">
-                           <label className="text-[10px] text-ableton-muted uppercase">Target Version</label>
-                           <select 
-                              value={preferences.liveVersion}
-                              onChange={(e) => setPreferences(prev => ({...prev, liveVersion: e.target.value as any}))}
-                              className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-xs text-ableton-text"
-                            >
-                               <option value="12">Live 12</option>
-                               <option value="11">Live 11</option>
-                           </select>
-                       </div>
-
-                       {/* 6. Genre Context */}
-                       <div className="space-y-1">
-                           <label className="text-[10px] text-ableton-muted uppercase">Musical Context</label>
-                           <select 
-                              value={preferences.genre}
-                              onChange={(e) => setPreferences(prev => ({...prev, genre: e.target.value as any}))}
-                              className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-xs text-ableton-text"
-                            >
-                               <option value="general">General / No Specific Genre</option>
-                               <option value="techno">Techno</option>
-                               <option value="house">House</option>
-                               <option value="hiphop">Hip Hop / Trap</option>
-                               <option value="ambient">Ambient / Cinematic</option>
-                           </select>
-                       </div>
-
-                       {/* 7. Tone */}
-                       <div className="space-y-1">
-                           <label className="text-[10px] text-ableton-muted uppercase">Tone</label>
-                           <select 
-                              value={preferences.tone}
-                              onChange={(e) => setPreferences(prev => ({...prev, tone: e.target.value as any}))}
-                              className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-xs text-ableton-text"
-                            >
-                               <option value="encouraging">Encouraging & Helpful</option>
-                               <option value="professional">Professional & Direct</option>
-                               <option value="technical">Highly Technical</option>
-                           </select>
-                       </div>
-
-                        {/* 8. Output Length */}
-                       <div className="space-y-1">
-                           <label className="text-[10px] text-ableton-muted uppercase">Default Length</label>
-                           <select 
-                              value={preferences.outputLength}
-                              onChange={(e) => setPreferences(prev => ({...prev, outputLength: e.target.value as any}))}
-                              className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-xs text-ableton-text"
-                            >
-                               <option value="concise">Short / Concise</option>
-                               <option value="balanced">Balanced</option>
-                               <option value="detailed">Long / Detailed</option>
-                           </select>
-                       </div>
-
-                        {/* 9. Format */}
-                       <div className="space-y-1">
-                           <label className="text-[10px] text-ableton-muted uppercase">Output Format</label>
-                           <select 
-                              value={preferences.format}
-                              onChange={(e) => setPreferences(prev => ({...prev, format: e.target.value as any}))}
-                              className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-xs text-ableton-text"
-                            >
-                               <option value="steps">Step-by-Step Guide</option>
-                               <option value="paragraphs">Paragraphs</option>
-                               <option value="bullet_points">Bullet Points</option>
-                           </select>
-                       </div>
-
-                       {/* Switches for Toggles */}
-                       <div className="space-y-2 pt-2 border-t border-ableton-border">
-                          <Switch 
-                            checked={preferences.useEmojis} 
-                            onChange={(c) => setPreferences(p => ({...p, useEmojis: c}))} 
-                            label="Use Emojis 🎛️"
-                            className="scale-90 origin-left"
-                          />
-                          <Switch 
-                            checked={preferences.useAnalogies} 
-                            onChange={(c) => setPreferences(p => ({...p, useAnalogies: c}))} 
-                            label="Use Analogies"
-                            className="scale-90 origin-left"
-                          />
-                          <Switch 
-                            checked={preferences.showShortcuts} 
-                            onChange={(c) => setPreferences(p => ({...p, showShortcuts: c}))} 
-                            label="Show Keyboard Shortcuts"
-                            className="scale-90 origin-left"
-                          />
-                          <Switch 
-                            checked={preferences.includeTroubleshooting} 
-                            onChange={(c) => setPreferences(p => ({...p, includeTroubleshooting: c}))} 
-                            label="Include Troubleshooting Tips"
-                            className="scale-90 origin-left"
-                          />
-                       </div>
-
-                   </div>
-                </div>
+                </section>
              </div>
           )}
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col h-screen overflow-hidden relative bg-ableton-base">
-        
-        {/* Header */}
-        <header className="h-16 bg-ableton-surface border-b border-ableton-border flex items-center justify-between px-6 flex-shrink-0 transition-colors duration-300">
+      {/* Main Area */}
+      <main className="flex-1 flex flex-col relative">
+        <header className="h-16 bg-ableton-surface/80 backdrop-blur-md border-b border-ableton-border flex items-center justify-between px-6 z-20 absolute top-0 left-0 right-0">
           <div className="flex items-center gap-3">
-            <button onClick={() => setShowHistory(true)} className="md:hidden text-ableton-muted">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+            <button onClick={() => setShowHistory(true)} className="md:hidden text-ableton-muted hover:text-ableton-text">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
             </button>
-            <div className="w-8 h-8 bg-ableton-accent rounded-sm flex items-center justify-center shadow-lg">
-                <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M6 2v20h2V2H6zm4 0v20h2V2h-2zm4 0v20h2V2h-2zm4 0v20h2V2h-2z"/></svg>
+            <div className="flex flex-col leading-none">
+                <h1 className="text-lg font-bold tracking-tight text-ableton-text">LiveWire</h1>
+                <span className="text-[10px] text-ableton-accent font-mono uppercase tracking-widest">Architect</span>
             </div>
-            <h1 className="text-lg font-semibold tracking-wide text-ableton-text">LiveWire <span className="text-xs text-ableton-muted font-normal ml-2 hidden sm:inline">Ableton 12 Assistant</span></h1>
           </div>
-          
-          <div className="flex items-center gap-3">
-             <div className="text-xs font-mono text-ableton-yellow bg-yellow-900/20 px-2 py-1 rounded hidden sm:block border border-yellow-900/30">
-                v12.0
-             </div>
-             {/* Help Button */}
-             <button onClick={() => setShowHelp(true)} className="p-2 text-ableton-muted hover:text-ableton-text hover:bg-ableton-panel rounded-full transition-colors" title="Help">
-                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-             </button>
+          <div className="flex items-center gap-4">
+             <div className="text-[10px] font-mono text-ableton-muted bg-ableton-panel px-2 py-1 rounded border border-ableton-border hidden sm:block">Ableton Live {preferences.liveVersion}</div>
+             <button onClick={() => setShowHelp(true)} className="text-ableton-muted hover:text-ableton-text transition-colors"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></button>
           </div>
         </header>
 
-        {/* Scrollable Output Area */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
-           {/* Suggestions Grid (only if no response yet) */}
-           {!response && !isGenerating && !responseImage && (
-             <div className="max-w-4xl mx-auto space-y-8">
+        <div className="flex-1 overflow-y-auto pt-20 pb-40 px-4 md:px-8 scroll-smooth" ref={bottomRef}>
+           {!response && !isGenerating && !responseImage ? (
+             <div className="max-w-5xl mx-auto mt-8 animate-in fade-in zoom-in-95 duration-500">
+                <div className="text-center mb-12">
+                    <h2 className="text-4xl md:text-5xl font-light text-ableton-text mb-4 tracking-tight">What are we building?</h2>
+                    <p className="text-ableton-muted text-lg max-w-2xl mx-auto font-light">Select a workflow or describe your idea below.</p>
+                </div>
                 
-                {/* Workflow Section */}
-                <div>
-                   <p className="text-center text-ableton-muted mb-4 uppercase tracking-widest text-xs font-bold">Techno Workflows</p>
-                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {technoWorkflows.map((s, i) => (
-                      <button 
-                        key={i} 
-                        onClick={() => { setPrompt(s.prompt); handleGenerate(s.prompt); }}
-                        className="text-left p-4 bg-ableton-panel border border-ableton-border hover:border-ableton-accent/50 hover:bg-ableton-surface transition-all rounded-sm text-sm text-ableton-text shadow-sm opacity-80 hover:opacity-100 flex flex-col gap-2"
-                      >
-                        <span className="font-bold text-ableton-accent">{s.label}</span>
-                        <span className="text-xs text-ableton-muted leading-snug">{s.prompt}</span>
-                      </button>
-                    ))}
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-widest mb-4 border-b border-ableton-border pb-2">Techno Workflows</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {technoWorkflows.map((s, i) => (
+                                <button key={i} onClick={() => { setPrompt(s.prompt); handleGenerate(s.prompt); }} className="text-left p-4 bg-ableton-panel border border-ableton-border hover:border-ableton-accent hover:bg-ableton-surface transition-all rounded-lg group shadow-sm hover:shadow-md">
+                                    <span className="text-xl mb-2 block">{s.icon}</span>
+                                    <span className="font-semibold text-sm text-ableton-text block mb-1 group-hover:text-ableton-accent">{s.label}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div>
+                        <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-widest mb-4 border-b border-ableton-border pb-2">Live 12 Advanced</h3>
+                         <div className="flex flex-col gap-3">
+                            {advancedWorkflows.map((s, i) => (
+                                <button key={i} onClick={() => { setPrompt(s.prompt); handleGenerate(s.prompt); }} className="text-left p-4 bg-ableton-panel border border-ableton-border hover:border-ableton-accent hover:bg-ableton-surface transition-all rounded-lg flex items-center gap-4 group shadow-sm hover:shadow-md">
+                                    <span className="text-2xl">{s.icon}</span>
+                                    <div>
+                                        <span className="font-semibold text-sm text-ableton-text block group-hover:text-ableton-accent">{s.label}</span>
+                                        <span className="text-xs text-ableton-muted line-clamp-1">{s.prompt}</span>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                 </div>
-
-                {/* Advanced Features Section */}
-                <div>
-                   <p className="text-center text-ableton-muted mb-4 uppercase tracking-widest text-xs font-bold">Advanced Features</p>
-                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {advancedWorkflows.map((s, i) => (
-                      <button 
-                        key={i} 
-                        onClick={() => { setPrompt(s.prompt); handleGenerate(s.prompt); }}
-                        className="text-left p-4 bg-ableton-panel border border-ableton-border hover:border-ableton-accent/50 hover:bg-ableton-surface transition-all rounded-sm text-sm text-ableton-text shadow-sm opacity-80 hover:opacity-100 flex flex-col gap-2 group"
-                      >
-                         <div className="flex items-center gap-2">
-                             <span className="w-2 h-2 rounded-full bg-ableton-yellow group-hover:animate-pulse"></span>
-                             <span className="font-bold text-ableton-text group-hover:text-ableton-accent transition-colors">{s.label}</span>
-                         </div>
-                         <span className="text-xs text-ableton-muted leading-snug pl-4">{s.prompt}</span>
-                      </button>
-                    ))}
-                  </div>
+             </div>
+           ) : (
+             <div className="max-w-4xl mx-auto space-y-6">
+                <div className="flex justify-end gap-2 opacity-0 hover:opacity-100 transition-opacity">
+                    <Button variant="secondary" onClick={handleCopy} className="text-xs py-1 h-8">{copied ? 'Copied' : 'Copy'}</Button>
+                    <Button variant="secondary" onClick={handleExport} className="text-xs py-1 h-8">Export</Button>
+                    <Button variant="secondary" onClick={openSaveModal} className="text-xs py-1 h-8">Save</Button>
                 </div>
-
+                <OutputDisplay content={response} imageUrl={responseImage} isStreaming={isGenerating} />
+                {lastPrompt && !isGenerating && (
+                    <div className="flex justify-center gap-2 mt-4">
+                        <button onClick={() => handleGenerate(lastPrompt, 'much_longer')} className="text-xs bg-ableton-panel px-3 py-1 rounded-full text-ableton-muted hover:text-ableton-text hover:bg-ableton-border transition-colors">More Detail</button>
+                        <button onClick={() => handleGenerate(lastPrompt, 'short')} className="text-xs bg-ableton-panel px-3 py-1 rounded-full text-ableton-muted hover:text-ableton-text hover:bg-ableton-border transition-colors">Simplify</button>
+                    </div>
+                )}
              </div>
            )}
-
-           <div className="max-w-4xl mx-auto relative">
-             {/* Action Toolbar */}
-             {response && !isGenerating && (
-                 <div className="flex justify-end mb-2 gap-2">
-                    <Button variant="secondary" onClick={handleCopy} className="flex items-center gap-2 text-xs">
-                        {copied ? (
-                             <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                        ) : (
-                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
-                        )}
-                        {copied ? 'Copied' : 'Copy'}
-                    </Button>
-                    <Button variant="secondary" onClick={handleExport} className="flex items-center gap-2 text-xs">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                        Export
-                    </Button>
-                    <Button variant="secondary" onClick={openSaveModal} className="flex items-center gap-2 text-xs">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
-                        Save as Template
-                    </Button>
-                 </div>
-             )}
-             <OutputDisplay content={response} imageUrl={responseImage} isStreaming={isGenerating} />
-           </div>
+           <div className="h-24"></div> 
         </div>
 
-        {/* Input Footer */}
-        <div className="bg-ableton-surface border-t border-ableton-border p-4 flex-shrink-0 z-10 transition-colors duration-300">
-          <div className="max-w-4xl mx-auto space-y-3">
-             
-             {/* Text Modifiers (Tiny Buttons) - Only show if there is a lastPrompt and not generating */}
-             {lastPrompt && !isGenerating && (
-                <div className="flex gap-2 justify-center mb-1">
-                    <button 
-                        onClick={() => handleGenerate(lastPrompt, 'much_longer')}
-                        className="text-[10px] uppercase font-bold tracking-wider px-3 py-1 bg-ableton-panel hover:bg-ableton-accent hover:text-white text-ableton-muted rounded-full transition-colors border border-ableton-border"
-                    >
-                        Much Longer
-                    </button>
-                    <button 
-                        onClick={() => handleGenerate(lastPrompt, 'professional')}
-                        className="text-[10px] uppercase font-bold tracking-wider px-3 py-1 bg-ableton-panel hover:bg-ableton-accent hover:text-white text-ableton-muted rounded-full transition-colors border border-ableton-border"
-                    >
-                        Make Professional
-                    </button>
-                    <button 
-                        onClick={() => handleGenerate(lastPrompt, 'short')}
-                        className="text-[10px] uppercase font-bold tracking-wider px-3 py-1 bg-ableton-panel hover:bg-ableton-accent hover:text-white text-ableton-muted rounded-full transition-colors border border-ableton-border"
-                    >
-                        Short
-                    </button>
-                </div>
-             )}
-
-             {/* Selected Image Preview */}
-             {selectedImage && (
-                 <div className="flex items-center gap-3 bg-ableton-base p-2 rounded border border-ableton-border w-fit">
-                    <img src={`data:image/png;base64,${selectedImage}`} className="h-10 w-10 object-cover rounded-sm" alt="Upload" />
-                    <div className="flex flex-col">
-                        <span className="text-xs text-ableton-muted">Image attached</span>
-                        <label className="flex items-center gap-2 cursor-pointer mt-1">
-                            <input 
-                                type="checkbox" 
-                                checked={isEditMode}
-                                onChange={(e) => setIsEditMode(e.target.checked)}
-                                className="w-3 h-3 accent-ableton-accent"
-                            />
-                            <span className="text-xs text-ableton-text hover:text-ableton-accent">Edit Mode</span>
-                        </label>
+        {/* Floating Input Area */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 pointer-events-none z-30 flex justify-center">
+            <div className="w-full max-w-3xl bg-ableton-surface/90 backdrop-blur-xl border border-ableton-border shadow-2xl rounded-2xl p-2 pointer-events-auto flex flex-col gap-2 transition-all focus-within:ring-2 focus-within:ring-ableton-accent/50 focus-within:border-ableton-accent">
+                
+                {selectedImage && (
+                    <div className="px-3 pt-2 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                             <img src={`data:image/png;base64,${selectedImage}`} className="h-10 w-10 rounded object-cover border border-ableton-border" alt="Selected" />
+                             <div className="flex flex-col">
+                                <span className="text-xs font-bold text-ableton-text">Image Attached</span>
+                                <label className="flex items-center gap-1 cursor-pointer">
+                                    <input type="checkbox" checked={isEditMode} onChange={(e) => setIsEditMode(e.target.checked)} className="accent-ableton-accent w-3 h-3" />
+                                    <span className="text-[10px] text-ableton-muted">Edit Mode</span>
+                                </label>
+                             </div>
+                        </div>
+                        <button onClick={() => {setSelectedImage(null); setIsEditMode(false)}} className="text-ableton-muted hover:text-red-400"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
                     </div>
-                    <button onClick={() => { setSelectedImage(null); setIsEditMode(false); }} className="text-ableton-muted hover:text-ableton-text ml-2">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                 </div>
-             )}
+                )}
 
-             <div className="flex gap-3">
-                <div className="flex items-center gap-2">
-                     {/* Image Upload Button */}
-                     <input 
-                        type="file" 
-                        ref={fileInputRef} 
-                        onChange={handleFileSelect} 
-                        accept="image/*" 
-                        className="hidden" 
-                    />
-                    <Button variant="icon" onClick={() => fileInputRef.current?.click()} title="Upload Image">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                    </Button>
+                <div className="flex items-end gap-2">
+                    <div className="flex gap-1 pb-1 pl-1">
+                         <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept="image/*" className="hidden" />
+                         <Button variant="icon" onClick={() => fileInputRef.current?.click()} title="Upload Image"><ImageIcon /></Button>
+                         <Button variant="icon" onClick={isRecording ? stopRecording : startRecording} title="Record Audio"><MicIcon active={isRecording} /></Button>
+                    </div>
                     
-                    {/* Microphone Button */}
+                    <textarea 
+                        value={prompt}
+                        onChange={(e) => setPrompt(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder={selectedImage ? (isEditMode ? "Describe edits..." : "Ask about this image...") : "Ask LiveWire..."}
+                        className="flex-1 bg-transparent border-none text-ableton-text placeholder-ableton-muted/50 focus:ring-0 resize-none py-3 px-2 max-h-32 min-h-[44px] text-sm leading-relaxed scrollbar-hide"
+                        rows={1}
+                    />
+
                     <Button 
-                        variant="icon" 
-                        onClick={isRecording ? stopRecording : startRecording}
-                        className={isRecording ? "text-red-500 bg-red-500/10 animate-pulse" : ""}
-                        title="Transcribe Audio"
+                        onClick={() => handleGenerate()} 
+                        disabled={!prompt.trim() && !selectedImage} 
+                        isLoading={isGenerating}
+                        className="rounded-xl h-10 w-10 !p-0 !min-w-0 bg-ableton-accent hover:bg-ableton-accent-hover text-white shadow-lg mb-1 mr-1 flex-shrink-0"
                     >
-                        {isRecording ? (
-                             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1" /></svg>
-                        ) : (
-                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
-                        )}
+                        {!isGenerating && <SendIcon />}
                     </Button>
                 </div>
-
-                <div className="flex-1 relative">
-                    <input 
-                    type="text" 
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder={selectedImage ? (isEditMode ? "Describe how to edit this image..." : "Ask about this image...") : "Describe a sound, effect, or workflow..."}
-                    className="w-full bg-ableton-base border border-ableton-border rounded p-4 pr-12 text-ableton-text placeholder-ableton-muted focus:outline-none focus:border-ableton-accent focus:ring-1 focus:ring-ableton-accent transition-all font-mono text-sm"
-                    />
-                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-ableton-muted border border-ableton-border rounded px-1.5 py-0.5">
-                    ENTER
-                    </div>
-                </div>
-                <Button 
-                onClick={() => handleGenerate()} 
-                isLoading={isGenerating}
-                disabled={(!prompt.trim() && !selectedImage)}
-                >
-                Generate
-                </Button>
-             </div>
-          </div>
+            </div>
         </div>
       </main>
     </div>
