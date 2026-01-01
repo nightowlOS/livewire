@@ -3,7 +3,7 @@ import { generateAbletonGuideStream, transcribeAudio, editImage } from './servic
 import { Button } from './components/Button';
 import { OutputDisplay } from './components/OutputDisplay';
 import { Switch } from './components/Switch';
-import { ChatMessage, Theme, SavedTemplate, UserPreferences } from './types';
+import { ChatMessage, Theme, SavedTemplate, UserPreferences, CustomTheme } from './types';
 
 const App: React.FC = () => {
   const [prompt, setPrompt] = useState('');
@@ -21,6 +21,26 @@ const App: React.FC = () => {
     }
     return 'dark';
   });
+  const [customThemes, setCustomThemes] = useState<CustomTheme[]>(() => {
+    try {
+        const saved = localStorage.getItem('ableton-custom-themes');
+        return saved ? JSON.parse(saved) : [];
+    } catch(e) { return [] }
+  });
+  
+  // New Theme Creation State
+  const [isCreatingTheme, setIsCreatingTheme] = useState(false);
+  const [newThemeDraft, setNewThemeDraft] = useState<CustomTheme['colors']>({
+      base: '#1a1a1a',
+      surface: '#222222',
+      panel: '#2a2a2a',
+      border: '#333333',
+      text: '#d9d9d9',
+      muted: '#9ca3af',
+      accent: '#ff764d'
+  });
+  const [newThemeName, setNewThemeName] = useState('');
+
   const [activeTab, setActiveTab] = useState<'history' | 'templates' | 'config'>('history');
   const [showHelp, setShowHelp] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -35,6 +55,16 @@ const App: React.FC = () => {
       genre: 'general',
       tone: 'encouraging',
       outputLength: 'balanced',
+      
+      // Default Granulars
+      sentenceComplexity: 5,
+      jargonLevel: 5,
+      deviceExplanationDepth: 5,
+      
+      // Default MIDI
+      midiComplexity: 5,
+      midiMusicality: 8,
+
       useEmojis: true,
       useAnalogies: true,
       showShortcuts: true,
@@ -67,9 +97,52 @@ const App: React.FC = () => {
 
   // Apply theme to document and persist
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
+    if (theme === 'custom') {
+       // Look for active custom theme? Logic to store active custom ID would be needed, 
+       // but for simplicity, let's assume if it's custom, we load the variables manually
+       // This part actually requires knowing WHICH custom theme is active. 
+       // For this implementation, selecting a custom theme will simply set the variables directly
+       // and set theme state to 'custom'.
+    } else {
+        document.documentElement.setAttribute('data-theme', theme);
+        // Clear custom properties if any
+        document.documentElement.style.removeProperty('--color-base');
+        document.documentElement.style.removeProperty('--color-surface');
+        document.documentElement.style.removeProperty('--color-panel');
+        document.documentElement.style.removeProperty('--color-border');
+        document.documentElement.style.removeProperty('--color-text');
+        document.documentElement.style.removeProperty('--color-muted');
+        document.documentElement.style.removeProperty('--color-accent');
+    }
     localStorage.setItem('ableton-theme', theme);
   }, [theme]);
+
+  const applyCustomTheme = (customTheme: CustomTheme) => {
+    setTheme('custom');
+    document.documentElement.removeAttribute('data-theme');
+    document.documentElement.style.setProperty('--color-base', customTheme.colors.base);
+    document.documentElement.style.setProperty('--color-surface', customTheme.colors.surface);
+    document.documentElement.style.setProperty('--color-panel', customTheme.colors.panel);
+    document.documentElement.style.setProperty('--color-border', customTheme.colors.border);
+    document.documentElement.style.setProperty('--color-text', customTheme.colors.text);
+    document.documentElement.style.setProperty('--color-muted', customTheme.colors.muted);
+    document.documentElement.style.setProperty('--color-accent', customTheme.colors.accent);
+  };
+
+  const saveCustomTheme = () => {
+    if (!newThemeName.trim()) return;
+    const newTheme: CustomTheme = {
+        id: Date.now().toString(),
+        name: newThemeName,
+        colors: newThemeDraft
+    };
+    const updated = [...customThemes, newTheme];
+    setCustomThemes(updated);
+    localStorage.setItem('ableton-custom-themes', JSON.stringify(updated));
+    applyCustomTheme(newTheme);
+    setIsCreatingTheme(false);
+    setNewThemeName('');
+  };
 
   // Save templates to local storage
   useEffect(() => {
@@ -104,7 +177,10 @@ const App: React.FC = () => {
                 useEmojis: false,
                 useAnalogies: false,
                 outputLength: 'detailed',
-                includeTroubleshooting: true
+                includeTroubleshooting: true,
+                sentenceComplexity: 8,
+                jargonLevel: 9,
+                deviceExplanationDepth: 9
             });
             break;
         case 'experimental':
@@ -116,7 +192,12 @@ const App: React.FC = () => {
                 useEmojis: true,
                 useAnalogies: true,
                 outputLength: 'balanced',
-                includeTroubleshooting: false
+                includeTroubleshooting: false,
+                sentenceComplexity: 6,
+                jargonLevel: 7,
+                deviceExplanationDepth: 7,
+                midiComplexity: 9,
+                midiMusicality: 4
             });
             break;
         case 'beginner':
@@ -128,7 +209,10 @@ const App: React.FC = () => {
                 useEmojis: true,
                 useAnalogies: true,
                 format: 'steps',
-                showShortcuts: true
+                showShortcuts: true,
+                sentenceComplexity: 3,
+                jargonLevel: 2,
+                deviceExplanationDepth: 3
             });
             break;
     }
@@ -150,6 +234,7 @@ const App: React.FC = () => {
         tempPrefs.tone = 'professional';
         tempPrefs.useEmojis = false;
         tempPrefs.useAnalogies = false;
+        tempPrefs.jargonLevel = 9;
     } else if (modifier === 'short') {
         extraInstruction = "Make this response extremely SHORT and CONCISE. Bullet points only.";
         tempPrefs.outputLength = 'concise';
@@ -180,6 +265,15 @@ const App: React.FC = () => {
     - Creativity Mode: ${tempPrefs.creativity === 'experimental' ? 'Suggest unconventional signal routing and weird sound design tricks.' : 'Stick to standard, reliable industry techniques.'}
     - Show Shortcuts: ${tempPrefs.showShortcuts ? 'Yes' : 'No'}
     - Troubleshooting: ${tempPrefs.includeTroubleshooting ? 'Include common pitfalls' : 'No'}
+    
+    [Style Fine-Tuning (1-10)]:
+    - Sentence Complexity: ${tempPrefs.sentenceComplexity}/10
+    - Technical Jargon: ${tempPrefs.jargonLevel}/10
+    - Device Explanation Depth: ${tempPrefs.deviceExplanationDepth}/10
+    
+    [MIDI Generation Settings (1-10)]:
+    - MIDI Pattern Complexity: ${tempPrefs.midiComplexity}/10
+    - MIDI Musicality/Scale Adherence: ${tempPrefs.midiMusicality}/10
     `;
     
     const userMsg: ChatMessage = {
@@ -540,7 +634,7 @@ const App: React.FC = () => {
           )}
 
           {activeTab === 'config' && (
-             <div className="p-4 space-y-6">
+             <div className="p-4 space-y-8 pb-24">
                 
                 {/* 0. Smart Presets (Synthesized Configs) */}
                 <div className="space-y-3">
@@ -558,7 +652,87 @@ const App: React.FC = () => {
                    </div>
                 </div>
 
-                <div className="space-y-3">
+                {/* Granular Style Control */}
+                <div className="space-y-4 border-t border-ableton-border pt-4">
+                    <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-wider">Output Style Fine-Tuning</h3>
+                    
+                    <div className="space-y-3">
+                        <div className="space-y-1">
+                            <div className="flex justify-between text-[10px] text-ableton-muted uppercase">
+                                <span>Sentence Complexity</span>
+                                <span>{preferences.sentenceComplexity}/10</span>
+                            </div>
+                            <input 
+                                type="range" min="1" max="10" 
+                                value={preferences.sentenceComplexity}
+                                onChange={(e) => setPreferences({...preferences, sentenceComplexity: parseInt(e.target.value)})}
+                                className="w-full h-1 bg-ableton-panel rounded-lg appearance-none cursor-pointer accent-ableton-accent"
+                            />
+                        </div>
+
+                        <div className="space-y-1">
+                            <div className="flex justify-between text-[10px] text-ableton-muted uppercase">
+                                <span>Technical Jargon</span>
+                                <span>{preferences.jargonLevel}/10</span>
+                            </div>
+                            <input 
+                                type="range" min="1" max="10" 
+                                value={preferences.jargonLevel}
+                                onChange={(e) => setPreferences({...preferences, jargonLevel: parseInt(e.target.value)})}
+                                className="w-full h-1 bg-ableton-panel rounded-lg appearance-none cursor-pointer accent-ableton-accent"
+                            />
+                        </div>
+
+                        <div className="space-y-1">
+                            <div className="flex justify-between text-[10px] text-ableton-muted uppercase">
+                                <span>Device Depth</span>
+                                <span>{preferences.deviceExplanationDepth}/10</span>
+                            </div>
+                            <input 
+                                type="range" min="1" max="10" 
+                                value={preferences.deviceExplanationDepth}
+                                onChange={(e) => setPreferences({...preferences, deviceExplanationDepth: parseInt(e.target.value)})}
+                                className="w-full h-1 bg-ableton-panel rounded-lg appearance-none cursor-pointer accent-ableton-accent"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* MIDI Generator Section */}
+                <div className="space-y-4 border-t border-ableton-border pt-4">
+                     <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-wider flex items-center gap-2">
+                        <span>Generative MIDI Tools</span>
+                        <span className="text-[9px] bg-ableton-accent/20 text-ableton-accent px-1 rounded">Live 12</span>
+                     </h3>
+                     <div className="p-3 bg-ableton-panel rounded border border-ableton-border space-y-4">
+                        <div className="space-y-1">
+                             <div className="flex justify-between text-[10px] text-ableton-muted uppercase">
+                                <span>Pattern Complexity</span>
+                                <span>{preferences.midiComplexity}/10</span>
+                            </div>
+                            <input 
+                                type="range" min="1" max="10" 
+                                value={preferences.midiComplexity}
+                                onChange={(e) => setPreferences({...preferences, midiComplexity: parseInt(e.target.value)})}
+                                className="w-full h-1 bg-ableton-base rounded-lg appearance-none cursor-pointer accent-ableton-accent"
+                            />
+                        </div>
+                        <div className="space-y-1">
+                             <div className="flex justify-between text-[10px] text-ableton-muted uppercase">
+                                <span>Musicality / Scale Adherence</span>
+                                <span>{preferences.midiMusicality}/10</span>
+                            </div>
+                            <input 
+                                type="range" min="1" max="10" 
+                                value={preferences.midiMusicality}
+                                onChange={(e) => setPreferences({...preferences, midiMusicality: parseInt(e.target.value)})}
+                                className="w-full h-1 bg-ableton-base rounded-lg appearance-none cursor-pointer accent-ableton-accent"
+                            />
+                        </div>
+                     </div>
+                </div>
+
+                <div className="space-y-3 border-t border-ableton-border pt-4">
                    <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-wider">Visual Theme</h3>
                    <div className="grid grid-cols-3 gap-2">
                      {availableThemes.map(t => (
@@ -572,10 +746,74 @@ const App: React.FC = () => {
                             <span className="text-[9px] text-ableton-muted block text-center truncate">{t.name}</span>
                          </button>
                      ))}
+                     {customThemes.map(t => (
+                         <button
+                           key={t.id}
+                           onClick={() => applyCustomTheme(t)}
+                           className={`p-1 rounded border transition-all ${theme === 'custom' && document.documentElement.style.getPropertyValue('--color-base') === t.colors.base ? 'border-ableton-accent bg-ableton-panel' : 'border-transparent hover:bg-ableton-panel'}`}
+                           title={t.name}
+                         >
+                             <div className="w-full h-8 rounded mb-1 border border-white/10" style={{backgroundColor: t.colors.base}}>
+                                 <div className="w-full h-1/2" style={{backgroundColor: t.colors.accent}}></div>
+                             </div>
+                            <span className="text-[9px] text-ableton-muted block text-center truncate">{t.name}</span>
+                         </button>
+                     ))}
+                     <button
+                        onClick={() => setIsCreatingTheme(!isCreatingTheme)}
+                        className="p-1 rounded border border-dashed border-ableton-muted hover:border-ableton-accent hover:text-ableton-accent text-ableton-muted flex flex-col items-center justify-center h-[54px]"
+                     >
+                        <span className="text-lg font-bold">+</span>
+                        <span className="text-[9px]">Custom</span>
+                     </button>
                    </div>
+                   
+                   {/* Custom Theme Creator */}
+                   {isCreatingTheme && (
+                       <div className="mt-4 p-3 bg-ableton-panel rounded border border-ableton-border space-y-3 animate-in fade-in slide-in-from-top-2">
+                           <input 
+                              type="text" 
+                              placeholder="Theme Name"
+                              value={newThemeName}
+                              onChange={(e) => setNewThemeName(e.target.value)}
+                              className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-xs text-ableton-text mb-2"
+                           />
+                           <div className="grid grid-cols-2 gap-2">
+                               <div className="space-y-1">
+                                   <label className="text-[9px] text-ableton-muted uppercase">Base (Bg)</label>
+                                   <div className="flex gap-2">
+                                     <input type="color" value={newThemeDraft.base} onChange={e => setNewThemeDraft({...newThemeDraft, base: e.target.value})} className="h-6 w-8 bg-transparent cursor-pointer" />
+                                     <input type="text" value={newThemeDraft.base} onChange={e => setNewThemeDraft({...newThemeDraft, base: e.target.value})} className="w-full text-[10px] bg-ableton-base border-none rounded px-1" />
+                                   </div>
+                               </div>
+                               <div className="space-y-1">
+                                   <label className="text-[9px] text-ableton-muted uppercase">Accent</label>
+                                   <div className="flex gap-2">
+                                     <input type="color" value={newThemeDraft.accent} onChange={e => setNewThemeDraft({...newThemeDraft, accent: e.target.value})} className="h-6 w-8 bg-transparent cursor-pointer" />
+                                     <input type="text" value={newThemeDraft.accent} onChange={e => setNewThemeDraft({...newThemeDraft, accent: e.target.value})} className="w-full text-[10px] bg-ableton-base border-none rounded px-1" />
+                                   </div>
+                               </div>
+                               <div className="space-y-1">
+                                   <label className="text-[9px] text-ableton-muted uppercase">Text</label>
+                                   <div className="flex gap-2">
+                                     <input type="color" value={newThemeDraft.text} onChange={e => setNewThemeDraft({...newThemeDraft, text: e.target.value})} className="h-6 w-8 bg-transparent cursor-pointer" />
+                                     <input type="text" value={newThemeDraft.text} onChange={e => setNewThemeDraft({...newThemeDraft, text: e.target.value})} className="w-full text-[10px] bg-ableton-base border-none rounded px-1" />
+                                   </div>
+                               </div>
+                               <div className="space-y-1">
+                                   <label className="text-[9px] text-ableton-muted uppercase">Surface (Nav)</label>
+                                   <div className="flex gap-2">
+                                     <input type="color" value={newThemeDraft.surface} onChange={e => setNewThemeDraft({...newThemeDraft, surface: e.target.value})} className="h-6 w-8 bg-transparent cursor-pointer" />
+                                     <input type="text" value={newThemeDraft.surface} onChange={e => setNewThemeDraft({...newThemeDraft, surface: e.target.value})} className="w-full text-[10px] bg-ableton-base border-none rounded px-1" />
+                                   </div>
+                               </div>
+                           </div>
+                           <Button onClick={saveCustomTheme} disabled={!newThemeName} className="w-full mt-2 py-1 text-xs">Save Theme</Button>
+                       </div>
+                   )}
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-3 border-t border-ableton-border pt-4">
                    <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-wider">Assistant Personality</h3>
                    <div className="bg-ableton-panel p-4 rounded border border-ableton-border space-y-4">
                        
