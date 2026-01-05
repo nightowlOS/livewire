@@ -36,6 +36,16 @@ export interface CustomTheme {
   };
 }
 
+export interface ShortcutMap {
+    generate: string;
+    undo: string;
+    redo: string;
+    tabHistory: string;
+    tabTemplates: string;
+    tabTools: string;
+    tabSettings: string;
+}
+
 export interface UserPreferences {
   // Core
   detailLevel: 'beginner' | 'intermediate' | 'expert';

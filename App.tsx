@@ -3,7 +3,7 @@ import { generateAbletonGuideStream, transcribeAudio, editImage } from './servic
 import { Button } from './components/Button';
 import { OutputDisplay } from './components/OutputDisplay';
 import { Switch } from './components/Switch';
-import { ChatMessage, Theme, SavedTemplate, UserPreferences, CustomTheme } from './types';
+import { ChatMessage, Theme, SavedTemplate, UserPreferences, CustomTheme, ShortcutMap } from './types';
 
 const App: React.FC = () => {
   const [prompt, setPrompt] = useState('');
@@ -36,12 +36,52 @@ const App: React.FC = () => {
     } catch(e) { return [] }
   });
   
+  // Shortcuts
+  const [shortcuts, setShortcuts] = useState<ShortcutMap>(() => {
+      try {
+          const saved = localStorage.getItem('ableton-shortcuts');
+          return saved ? JSON.parse(saved) : {
+              generate: 'Enter',
+              undo: 'z',
+              redo: 'y',
+              tabHistory: '1',
+              tabTemplates: '2',
+              tabTools: '3',
+              tabSettings: '4'
+          };
+      } catch {
+          return {
+              generate: 'Enter',
+              undo: 'z',
+              redo: 'y',
+              tabHistory: '1',
+              tabTemplates: '2',
+              tabTools: '3',
+              tabSettings: '4'
+          };
+      }
+  });
+  const [recordingShortcut, setRecordingShortcut] = useState<keyof ShortcutMap | null>(null);
+
   // MIDI Tool State
   const [midiTarget, setMidiTarget] = useState<'general' | 'techno_bass' | 'atmos_pad' | 'glitch_drums'>('general');
-  
+  const [midiHumanization, setMidiHumanization] = useState(0); // 0-100
+  const [midiStructure, setMidiStructure] = useState('Main Loop');
+
   // Arrangement Tool State
   const [arrangeGenre, setArrangeGenre] = useState('Techno');
   const [arrangeEnergy, setArrangeEnergy] = useState('Peak Time');
+  const [arrangeVarIntro, setArrangeVarIntro] = useState(false);
+  const [arrangeVarDrop, setArrangeVarDrop] = useState(true);
+  const [arrangeVarBreakdown, setArrangeVarBreakdown] = useState(false);
+  const [arrangeVarOutro, setArrangeVarOutro] = useState(false);
+  
+  // Effect Chain Tool State
+  const [effectTarget, setEffectTarget] = useState('Distortion');
+  const [effectGenre, setEffectGenre] = useState('Techno');
+
+  // Documentation Tool State
+  const [docType, setDocType] = useState<'user_manual' | 'dev_specs'>('user_manual');
 
   // Theme Creator
   const [isCreatingTheme, setIsCreatingTheme] = useState(false);
@@ -112,8 +152,6 @@ const App: React.FC = () => {
   // Apply theme
   useEffect(() => {
     if (theme === 'custom') {
-       // logic handled by applyCustomTheme usually, but needing re-application on load would go here
-       // In a real app we'd verify the custom theme is active and re-apply colors
        const activeCustom = customThemes.find(c => c.id === exportThemeId) || customThemes[0];
        if(activeCustom) applyCustomTheme(activeCustom);
     } else {
@@ -129,6 +167,38 @@ const App: React.FC = () => {
     localStorage.setItem('ableton-theme', theme);
     setExportThemeId(theme === 'custom' ? (customThemes[0]?.id || 'dark') : theme);
   }, [theme]);
+
+  // Global Key Listener
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+        // Avoid triggering shortcuts when typing in inputs
+        if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return;
+
+        // Custom Recording Logic
+        if (recordingShortcut) return;
+
+        const key = e.key.toLowerCase();
+        
+        if (key === shortcuts.undo.toLowerCase() && (e.ctrlKey || e.metaKey)) {
+             e.preventDefault();
+             handleUndo();
+        } else if (key === shortcuts.redo.toLowerCase() && (e.ctrlKey || e.metaKey)) {
+             e.preventDefault();
+             handleRedo();
+        } else if (key === shortcuts.tabHistory.toLowerCase()) setActiveTab('history');
+        else if (key === shortcuts.tabTemplates.toLowerCase()) setActiveTab('templates');
+        else if (key === shortcuts.tabTools.toLowerCase()) setActiveTab('tools');
+        else if (key === shortcuts.tabSettings.toLowerCase()) setActiveTab('settings');
+    };
+    
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [shortcuts, history, redoStack, recordingShortcut]);
+
+  // Persist Shortcuts
+  useEffect(() => {
+      localStorage.setItem('ableton-shortcuts', JSON.stringify(shortcuts));
+  }, [shortcuts]);
 
   const applyCustomTheme = (customTheme: CustomTheme) => {
     setTheme('custom');
@@ -166,7 +236,6 @@ const App: React.FC = () => {
 
   // Session Management
   const handleUndo = () => {
-      // Logic: History is [newest, ..., oldest]. Turn is usually User -> Model (2 items)
       if (history.length < 2) return;
       const newHistory = [...history];
       const modelMsg = newHistory.shift();
@@ -176,18 +245,15 @@ const App: React.FC = () => {
           setRedoStack(prev => [modelMsg, userMsg, ...prev]);
           setHistory(newHistory);
           if (history.length === 2) { 
-              // If we undo the last item, clear response display
               setResponse('');
               setResponseImage(undefined);
           } else {
-              // Show previous model response
               const prevModel = newHistory[0];
               if (prevModel && prevModel.role === 'model') {
                   setResponse(prevModel.text);
                   setResponseImage(prevModel.imageUrl);
               }
           }
-          // Restore prompt
           setPrompt(userMsg.text);
       }
   };
@@ -395,6 +461,8 @@ const App: React.FC = () => {
     [MIDI Generation Settings (1-10)]:
     - MIDI Pattern Complexity: ${tempPrefs.midiComplexity}/10
     - MIDI Musicality/Scale Adherence: ${tempPrefs.midiMusicality}/10
+    - Humanization: ${midiHumanization}%
+    - Structure Context: ${midiStructure}
     `;
     
     const userMsg: ChatMessage = {
@@ -510,7 +578,7 @@ const App: React.FC = () => {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === shortcuts.generate && !e.shiftKey) {
       e.preventDefault();
       handleGenerate();
     }
@@ -656,6 +724,27 @@ const App: React.FC = () => {
     } catch (err) { console.error('Failed to copy:', err); }
   };
 
+  const handleRecordShortcut = (action: keyof ShortcutMap) => {
+      setRecordingShortcut(action);
+  };
+
+  // Listener for recording a new shortcut
+  useEffect(() => {
+      if (!recordingShortcut) return;
+      
+      const handler = (e: KeyboardEvent) => {
+          e.preventDefault();
+          const key = e.key;
+          // You might want to handle modifiers properly here, but for simplicity:
+          setShortcuts(prev => ({...prev, [recordingShortcut]: key}));
+          setRecordingShortcut(null);
+      };
+      
+      window.addEventListener('keydown', handler, {once: true});
+      return () => window.removeEventListener('keydown', handler);
+  }, [recordingShortcut]);
+
+
   const availableThemes: {id: Theme, name: string, color: string}[] = [
       { id: 'dark', name: 'Live 12 Dark', color: '#1a1a1a' },
       { id: 'light', name: 'Live 12 Light', color: '#f3f3f3' },
@@ -697,10 +786,12 @@ const App: React.FC = () => {
                  )}
                  {helpTab === 'shortcuts' && (
                      <div className="space-y-2 text-sm">
-                         <div className="flex justify-between border-b border-ableton-border pb-1"><span>Submit Prompt</span><code className="text-ableton-accent">Enter</code></div>
-                         <div className="flex justify-between border-b border-ableton-border pb-1"><span>New Line</span><code className="text-ableton-accent">Shift + Enter</code></div>
-                         <div className="flex justify-between border-b border-ableton-border pb-1"><span>Toggle Sidebar</span><code className="text-ableton-accent">Ctrl/Cmd + B</code></div>
-                         <div className="flex justify-between border-b border-ableton-border pb-1"><span>Save Session</span><code className="text-ableton-accent">Ctrl/Cmd + S</code></div>
+                         {Object.entries(shortcuts).map(([key, value]) => (
+                             <div key={key} className="flex justify-between border-b border-ableton-border pb-1">
+                                 <span className="capitalize">{key.replace('tab', 'Switch to ')}</span>
+                                 <code className="text-ableton-accent">{value}</code>
+                             </div>
+                         ))}
                      </div>
                  )}
               </div>
@@ -821,7 +912,7 @@ const App: React.FC = () => {
                  {tab === 'history' && <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
                  {tab === 'templates' && <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>}
                  {tab === 'tools' && <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 3-2 3-2zm0 0v-8" /></svg>}
-                 {tab === 'settings' && <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
+                 {tab === 'settings' && <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
                </button>
            ))}
         </div>
@@ -886,12 +977,29 @@ const App: React.FC = () => {
                              </select>
                         </div>
                         <div className="space-y-1">
+                             <div className="flex justify-between text-[10px] text-ableton-muted uppercase"><span>Structure Context</span></div>
+                             <select 
+                                value={midiStructure}
+                                onChange={(e) => setMidiStructure(e.target.value)}
+                                className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-xs text-ableton-text focus:outline-none focus:border-ableton-accent"
+                             >
+                                 <option value="Intro">Intro (Sparse)</option>
+                                 <option value="Build-up">Build-up (Rising)</option>
+                                 <option value="Drop">Drop (Main)</option>
+                                 <option value="Breakdown">Breakdown (Atmospheric)</option>
+                             </select>
+                        </div>
+                        <div className="space-y-1">
                              <div className="flex justify-between text-[10px] text-ableton-muted uppercase"><span>Complexity</span><span>{preferences.midiComplexity}/10</span></div>
                              <input type="range" min="1" max="10" value={preferences.midiComplexity} onChange={(e) => setPreferences({...preferences, midiComplexity: parseInt(e.target.value)})} className="w-full h-1 bg-ableton-base rounded-lg appearance-none cursor-pointer accent-ableton-accent"/>
                         </div>
                         <div className="space-y-1">
                              <div className="flex justify-between text-[10px] text-ableton-muted uppercase"><span>Musicality</span><span>{preferences.midiMusicality}/10</span></div>
                              <input type="range" min="1" max="10" value={preferences.midiMusicality} onChange={(e) => setPreferences({...preferences, midiMusicality: parseInt(e.target.value)})} className="w-full h-1 bg-ableton-base rounded-lg appearance-none cursor-pointer accent-ableton-accent"/>
+                        </div>
+                        <div className="space-y-1">
+                             <div className="flex justify-between text-[10px] text-ableton-muted uppercase"><span>Humanization</span><span>{midiHumanization}%</span></div>
+                             <input type="range" min="0" max="100" value={midiHumanization} onChange={(e) => setMidiHumanization(parseInt(e.target.value))} className="w-full h-1 bg-ableton-base rounded-lg appearance-none cursor-pointer accent-ableton-accent"/>
                         </div>
                         <Button 
                             className="w-full text-xs py-2 mt-2"
@@ -901,12 +1009,15 @@ const App: React.FC = () => {
                                 else if (midiTarget === 'atmos_pad') contextText = "Atmospheric Pads";
                                 else if (midiTarget === 'glitch_drums') contextText = "Glitch and IDM Drum Patterns";
                                 
-                                const toolPrompt = `Generate a detailed guide using Live 12's 'Seed', 'Rhythm', and 'Shape' generators specifically for ${contextText || 'creative patterns'}. Complexity: ${preferences.midiComplexity}/10, Musicality: ${preferences.midiMusicality}/10. Explain specific settings for Density, Velocity, and Scale Awareness.`;
+                                const toolPrompt = `Generate a detailed guide using Live 12's 'Seed', 'Rhythm', and 'Shape' generators specifically for ${contextText || 'creative patterns'}. 
+                                Context: ${midiStructure}. 
+                                Complexity: ${preferences.midiComplexity}/10, Musicality: ${preferences.midiMusicality}/10. 
+                                Humanization: ${midiHumanization}% (Explain how to use Velocity and Chance tools for this).`;
                                 setPrompt(toolPrompt);
                                 handleGenerate(toolPrompt);
                             }}
                         >
-                            Generate {midiTarget !== 'general' ? 'Contextual ' : ''}Guide
+                            Generate MIDI Guide
                         </Button>
                      </div>
                  </div>
@@ -933,15 +1044,89 @@ const App: React.FC = () => {
                               <option value="Radio">Radio Edit (Short)</option>
                            </select>
                         </div>
+                        
+                        {/* Variations Selection */}
+                        <div className="space-y-2 mt-2 pt-2 border-t border-ableton-border">
+                            <div className="text-[10px] text-ableton-muted uppercase">Generate Variations</div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <label className="flex items-center gap-2 cursor-pointer bg-ableton-base p-1.5 rounded border border-ableton-border hover:border-ableton-muted transition-colors">
+                                    <input type="checkbox" checked={arrangeVarIntro} onChange={(e) => setArrangeVarIntro(e.target.checked)} className="accent-ableton-accent w-3 h-3" />
+                                    <span className="text-[10px] text-ableton-text">Intro</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer bg-ableton-base p-1.5 rounded border border-ableton-border hover:border-ableton-muted transition-colors">
+                                    <input type="checkbox" checked={arrangeVarBreakdown} onChange={(e) => setArrangeVarBreakdown(e.target.checked)} className="accent-ableton-accent w-3 h-3" />
+                                    <span className="text-[10px] text-ableton-text">Breakdown</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer bg-ableton-base p-1.5 rounded border border-ableton-border hover:border-ableton-muted transition-colors">
+                                    <input type="checkbox" checked={arrangeVarDrop} onChange={(e) => setArrangeVarDrop(e.target.checked)} className="accent-ableton-accent w-3 h-3" />
+                                    <span className="text-[10px] text-ableton-text">Drop (Main)</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer bg-ableton-base p-1.5 rounded border border-ableton-border hover:border-ableton-muted transition-colors">
+                                    <input type="checkbox" checked={arrangeVarOutro} onChange={(e) => setArrangeVarOutro(e.target.checked)} className="accent-ableton-accent w-3 h-3" />
+                                    <span className="text-[10px] text-ableton-text">Outro</span>
+                                </label>
+                            </div>
+                        </div>
+
                         <Button 
                             className="w-full text-xs py-2 mt-2"
                             onClick={() => {
-                                const toolPrompt = `Create a complete arrangement structure guide for a ${arrangeGenre} track with a ${arrangeEnergy} vibe. Break it down into sections (Intro, Verse/Build, Drop/Chorus, etc.) with bar counts. Suggest automation moves for transitions.`;
+                                const vars = [];
+                                if (arrangeVarIntro) vars.push("Intro (e.g. rhythmic start vs atmospheric)");
+                                if (arrangeVarBreakdown) vars.push("Breakdown (e.g. harmonic shift vs stripping back)");
+                                if (arrangeVarDrop) vars.push("Drop/Chorus (e.g. variation in energy or rhythm)");
+                                if (arrangeVarOutro) vars.push("Outro (e.g. abrupt stop vs long fade)");
+                                
+                                const varInstruction = vars.length > 0 
+                                    ? `\n\n**Requested Variations**: Provide alternative arrangement ideas for the following sections:\n- ${vars.join('\n- ')}` 
+                                    : "";
+
+                                const toolPrompt = `Create a complete arrangement structure guide for a ${arrangeGenre} track with a ${arrangeEnergy} vibe. 
+                                Break it down into sections (Intro, Verse/Build, Drop/Chorus, etc.) with **specific bar counts**. 
+                                **Crucial**: Include specific transition ideas (automation curves, FX fills) between each section.${varInstruction}`;
                                 setPrompt(toolPrompt);
                                 handleGenerate(toolPrompt);
                             }}
                         >
                             Generate Arrangement
+                        </Button>
+                     </div>
+                 </div>
+
+                 {/* Audio Effect Chain Generator */}
+                 <div className="space-y-3">
+                     <h3 className="text-xs font-bold text-ableton-accent uppercase tracking-wider border-b border-ableton-border pb-1">Audio Effect Rack</h3>
+                     <div className="space-y-3 bg-ableton-panel p-3 rounded border border-ableton-border">
+                        <div className="space-y-1">
+                           <div className="flex justify-between text-[10px] text-ableton-muted uppercase"><span>Effect Target</span></div>
+                           <select value={effectTarget} onChange={(e) => setEffectTarget(e.target.value)} className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-xs text-ableton-text">
+                              <option value="Distortion">Distortion / Saturation</option>
+                              <option value="Space">Reverb / Space / Atmosphere</option>
+                              <option value="Modulation">Modulation / Movement</option>
+                              <option value="Glitch">Glitch / Lo-Fi</option>
+                              <option value="Dynamics">Dynamics / Bus Processing</option>
+                           </select>
+                        </div>
+                        <div className="space-y-1">
+                           <div className="flex justify-between text-[10px] text-ableton-muted uppercase"><span>Genre Context</span></div>
+                           <select value={effectGenre} onChange={(e) => setEffectGenre(e.target.value)} className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-xs text-ableton-text">
+                              <option value="Techno">Techno</option>
+                              <option value="House">House</option>
+                              <option value="Ambient">Ambient</option>
+                              <option value="Experimental">Experimental</option>
+                              <option value="HipHop">Hip Hop / Trap</option>
+                           </select>
+                        </div>
+                        <Button 
+                            className="w-full text-xs py-2 mt-2"
+                            onClick={() => {
+                                const toolPrompt = `Design a comprehensive Audio Effect Rack for **${effectTarget}** suitable for **${effectGenre}**. 
+                                List the devices in order. Explain the Macro mappings (8 Macros) in detail.`;
+                                setPrompt(toolPrompt);
+                                handleGenerate(toolPrompt);
+                            }}
+                        >
+                            Generate Effect Chain
                         </Button>
                      </div>
                  </div>
@@ -976,6 +1161,34 @@ const App: React.FC = () => {
                 </div>
 
                 <div className="space-y-4 border-t border-ableton-border pt-4">
+                    <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-wider">System & Environment</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                         <div className="space-y-1">
+                            <label className="text-[10px] text-ableton-muted uppercase block">Ableton Version</label>
+                            <select 
+                                value={preferences.liveVersion} 
+                                onChange={(e) => setPreferences({...preferences, liveVersion: e.target.value as any})}
+                                className="w-full bg-ableton-panel border border-ableton-border rounded p-2 text-xs text-ableton-text focus:outline-none focus:border-ableton-accent"
+                            >
+                                <option value="12">Live 12</option>
+                                <option value="11">Live 11</option>
+                            </select>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] text-ableton-muted uppercase block">Operating System</label>
+                            <select 
+                                value={preferences.os} 
+                                onChange={(e) => setPreferences({...preferences, os: e.target.value as any})}
+                                className="w-full bg-ableton-panel border border-ableton-border rounded p-2 text-xs text-ableton-text focus:outline-none focus:border-ableton-accent"
+                            >
+                                <option value="mac">macOS</option>
+                                <option value="windows">Windows</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="space-y-4 border-t border-ableton-border pt-4">
                     <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-wider">Fine-Tuning</h3>
                     <div className="space-y-3">
                         <div className="space-y-1">
@@ -990,6 +1203,24 @@ const App: React.FC = () => {
                             <div className="flex justify-between text-[10px] text-ableton-muted uppercase"><span>Depth</span><span>{preferences.deviceExplanationDepth}/10</span></div>
                             <input type="range" min="1" max="10" value={preferences.deviceExplanationDepth} onChange={(e) => setPreferences({...preferences, deviceExplanationDepth: parseInt(e.target.value)})} className="w-full h-1 bg-ableton-panel rounded-lg appearance-none cursor-pointer accent-ableton-accent"/>
                         </div>
+                    </div>
+                </div>
+
+                {/* Keyboard Shortcuts */}
+                <div className="space-y-3 border-t border-ableton-border pt-4">
+                    <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-wider">Keyboard Shortcuts</h3>
+                    <div className="space-y-2">
+                        {Object.entries(shortcuts).map(([key, val]) => (
+                            <div key={key} className="flex items-center justify-between bg-ableton-panel p-2 rounded border border-ableton-border">
+                                <span className="text-[10px] text-ableton-text capitalize">{key.replace('tab', 'Switch to ')}</span>
+                                <button 
+                                    onClick={() => handleRecordShortcut(key as keyof ShortcutMap)}
+                                    className={`text-[10px] px-2 py-1 rounded min-w-[50px] text-center ${recordingShortcut === key ? 'bg-red-500 text-white animate-pulse' : 'bg-ableton-base text-ableton-accent'}`}
+                                >
+                                    {recordingShortcut === key ? 'Press Key...' : val}
+                                </button>
+                            </div>
+                        ))}
                     </div>
                 </div>
 
@@ -1027,25 +1258,31 @@ const App: React.FC = () => {
                    )}
                 </div>
 
-                {/* Developer / Meta-Prompt Tool */}
+                {/* Documentation Generator */}
                 <div className="space-y-3 border-t border-ableton-border pt-4">
-                    <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-wider">Developer / Meta-Tools</h3>
-                    <p className="text-[10px] text-ableton-muted">Generate detailed specifications and prompts for recreating or extending this application.</p>
-                    <Button 
-                        variant="secondary" 
-                        onClick={() => {
-                            const metaPrompt = `Create detailed Markdown documents describing the specifications of this 'LiveWire' application. Include:
-                            1. funct_python3.md: Functionality guide designed for Python 3.
-                            2. metaPrompt.md: A prompt to generate prompts.
-                            3. App logic, UI design patterns, and Node.js implementation details.
-                            Format the output as a structured guide with code blocks where appropriate.`;
-                            setPrompt(metaPrompt);
-                            handleGenerate(metaPrompt);
-                        }} 
-                        className="w-full text-xs border-dashed"
-                    >
-                        Generate App Meta-Specs
-                    </Button>
+                    <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-wider">Documentation & Meta-Tools</h3>
+                    <div className="space-y-2">
+                        <select value={docType} onChange={(e) => setDocType(e.target.value as any)} className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-xs text-ableton-text focus:outline-none focus:border-ableton-accent">
+                            <option value="user_manual">User Manual (EN/DE + HTML/MD)</option>
+                            <option value="dev_specs">Developer Specifications & Meta-Prompt</option>
+                        </select>
+                        <Button 
+                            className="w-full text-xs border-dashed"
+                            variant="secondary"
+                            onClick={() => {
+                                let docPrompt = "";
+                                if (docType === 'user_manual') {
+                                    docPrompt = "Create a comprehensive User Manual for this 'LiveWire' application. \n\nOutput Requirements:\n1. Provide the content in both **English** and **German**.\n2. Format as **Markdown**.\n3. Include a section with the HTML code block for a standalone 'Help.html' page containing this manual.\n4. Cover features: MIDI Tools, Arrangement Architect, Stem Splitter, Theme Creator.";
+                                } else {
+                                    docPrompt = "Create advanced developer documentation for 'LiveWire'. \n\nOutput Requirements:\n1. **funct_python3.md**: Functional requirements tailored for a Python backend.\n2. **metaPrompt.md**: A master prompt to generate these specs.\n3. **Architecture**: Describe the React/TypeScript frontend and Gemini integration.\n4. Provide both English and German translations for the high-level summary.";
+                                }
+                                setPrompt(docPrompt);
+                                handleGenerate(docPrompt);
+                            }}
+                        >
+                            Generate Documentation
+                        </Button>
+                    </div>
                 </div>
              </div>
           )}
@@ -1169,7 +1406,7 @@ const App: React.FC = () => {
 
                 <div className="flex-1 relative group">
                     <input type="text" value={prompt} onChange={(e) => setPrompt(e.target.value)} onKeyDown={handleKeyDown} placeholder={selectedImage ? (isEditMode ? "Describe how to edit this image..." : "Ask about this image...") : "Describe a sound, effect, or workflow..."} className="w-full bg-ableton-base border border-ableton-border rounded p-4 pr-12 text-ableton-text placeholder-ableton-muted focus:outline-none focus:border-ableton-accent focus:ring-1 focus:ring-ableton-accent transition-all font-mono text-sm shadow-inner" />
-                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[10px] text-ableton-muted border border-ableton-border rounded px-1.5 py-0.5 opacity-50 group-hover:opacity-100 transition-opacity">ENTER</div>
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[10px] text-ableton-muted border border-ableton-border rounded px-1.5 py-0.5 opacity-50 group-hover:opacity-100 transition-opacity">{shortcuts.generate.toUpperCase()}</div>
                 </div>
                 <Button onClick={() => handleGenerate()} isLoading={isGenerating} disabled={(!prompt.trim() && !selectedImage)}>Generate</Button>
              </div>
@@ -1184,6 +1421,24 @@ const App: React.FC = () => {
              )}
           </div>
         </div>
+
+        {/* New Footer */}
+        <footer className="bg-ableton-panel border-t border-ableton-border py-2 px-6 flex flex-col md:flex-row items-center justify-between text-[10px] text-ableton-muted">
+            <div className="flex gap-4">
+                <a href="#" className="hover:text-ableton-text transition-colors">Home</a>
+                <a href="#" className="hover:text-ableton-text transition-colors">Blog</a>
+                <a href="#" className="hover:text-ableton-text transition-colors">Config</a>
+            </div>
+            <div className="flex gap-4 mt-2 md:mt-0">
+                <span>LiveWire: Ableton Architect</span>
+                <span className="font-mono text-ableton-accent">v1.2.0</span>
+                <div className="flex gap-2">
+                    <a href="#" className="hover:text-ableton-text transition-colors" title="GitHub">
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                    </a>
+                </div>
+            </div>
+        </footer>
       </main>
     </div>
   );

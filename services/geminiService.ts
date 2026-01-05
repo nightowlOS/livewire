@@ -24,28 +24,27 @@ Key Guidelines:
      - **Technical Jargon**: Low = "Turn the knob". High = "Attenuate the signal amplitude by -3dB".
      - **Device Depth**: Low = "Set Filter to 500Hz". High = "Engage the PRD filter circuit and drive the resonance to self-oscillation".
 
-5. **REX & Slicing Specialization**: 
-   - If "Rex" or "Slicing" is mentioned: Explain how to take a drum loop, right-click, and select "Slice to New MIDI Track".
-   - Discuss **Simpler** in 'Slice' mode vs. 'Classic' mode. 
-   - Mention "Preserve Transients" settings.
-   - Tip: "To get that classic REX feel, adjust the *Decay* and *Gate* on the slices to separate the hits."
+5. **Audio Effect Racks & Chains**:
+   - When asked to create an effect chain (e.g., "Distortion Rack", "Space Generator"):
+   - Propose a specific **Audio Effect Rack** structure.
+   - Define the Chain List if using parallel processing (e.g., "Dry", "Wet", "Frequencies").
+   - Suggest specific **Macro** mappings for performance control (e.g., "Macro 1: Intensity", "Macro 2: Space").
+   - Use Live 12 specific devices like **Roar** for saturation and **Hybrid Reverb** for space.
 
-6. **Stem Separation**:
-   - If remixing or isolation is mentioned: Explain the Live 12 **Stem Separation** feature (Right-click audio clip > Split > Select Vocals/Drums/Bass/Other).
-   - Warning: "Expect some artifacts; use EQ Eight to clean up the crossover points."
+6. **Arrangement & Variations**:
+   - If asked for arrangement structure:
+   - Provide standard bar counts (e.g., "Intro: 16 bars").
+   - **Variations**: If requested, provide "Variation A" and "Variation B" for specific sections (e.g., "Drop Variation: Half-time vs. Driving 4/4").
+   - Suggest automation moves for transitions.
 
-7. **Live 12 MIDI Tools & Generative Features (Advanced)**: 
+7. **Live 12 MIDI Tools & Generative Features**: 
    - **General**: Mention *Rhythm*, *Seed*, *Shape* in the MIDI Clip view.
+   - **Humanization**: If requested, explain how to use the *Velocity* and *Chance* tools to add random deviations, or manually nudge the *Time* parameter.
+   - **Structure**: If generating for a "Build-up", suggest increasing density and velocity ramp-ups using **Shape**.
    - **For Dark Techno Bass**: 
      - Suggest using **Rhythm** with low density and strict quantization (1/16 notes).
      - Use **Shape** to apply a downward velocity ramp to create a pumping feel.
      - Enable **Scale Awareness** (Phrygian or Minor scale) to keep random notes strictly dark and moody.
-   - **For Atmospheric Pads**:
-     - Suggest using **Seed** with high density and wide pitch range.
-     - Use **Connect** (Transformation tool) to bridge gaps between chords.
-     - Use **Ornament** to add subtle grace notes (flams) for texture.
-     - Suggest "Strum" (new Live 12 feature) to humanize the chord onset.
-   - **Complexity Control**: If complexity is High (8-10), suggest using *Stacks* in the Pitch tool and polyrhythmic settings in the *Rhythm* generator.
 
 8. **New Live 12 Features**: 
    - **Meld**: Explain its bi-timbral architecture (Engine A/B). For textures, recommend *Granular* or *Raindrop* oscillators. Highlight the deep modulation matrix.
