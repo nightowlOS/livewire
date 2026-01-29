@@ -21,6 +21,7 @@ const App: React.FC = () => {
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportFormat, setExportFormat] = useState<'md' | 'txt' | 'html' | 'docx' | 'pdf'>('md');
   const [exportThemeId, setExportThemeId] = useState<string>('dark');
+  const [exportFilename, setExportFilename] = useState('');
   
   // Feature states
   const [theme, setTheme] = useState<Theme>(() => {
@@ -82,6 +83,7 @@ const App: React.FC = () => {
 
   // Documentation Tool State
   const [docType, setDocType] = useState<'user_manual' | 'dev_specs'>('user_manual');
+  const [docTitle, setDocTitle] = useState('');
 
   // Theme Creator
   const [isCreatingTheme, setIsCreatingTheme] = useState(false);
@@ -385,24 +387,38 @@ const App: React.FC = () => {
       const p = currentPrompt.toLowerCase();
       const suggestions = [];
 
+      // Content specific
       if (p.includes('bass') || p.includes('rumble') || p.includes('kick')) {
-          suggestions.push("Add Sidechain Compression");
-          suggestions.push("Create Sub-Bass Layer");
-          suggestions.push("Apply Saturation (Roar)");
+          suggestions.push("Add Sidechain Compression details");
+          suggestions.push("Create a complementary Sub-Bass");
+          suggestions.push("Apply Multiband Distortion (Roar)");
       } else if (p.includes('pad') || p.includes('ambient') || p.includes('atmosphere')) {
-          suggestions.push("Add Shimmer Reverb");
-          suggestions.push("Modulate with LFO");
-          suggestions.push("Layer with Granular Texture");
+          suggestions.push("Add Shimmer Reverb chain");
+          suggestions.push("Modulate filters with LFO");
+          suggestions.push("Layer with granular textures (Meld)");
       } else if (p.includes('drum') || p.includes('percussion') || p.includes('beat')) {
-          suggestions.push("Apply Parallel Compression");
-          suggestions.push("Add Swing/Groove");
-          suggestions.push("Process with Drum Buss");
-      } else {
-          suggestions.push("Explain the Signal Flow");
-          suggestions.push("Suggest Macro Mappings");
-          suggestions.push("Create Audio Effect Rack");
+          suggestions.push("Apply Parallel Compression (New York style)");
+          suggestions.push("Add Swing/Groove instructions");
+          suggestions.push("Process with Drum Buss and Glue Compressor");
+      } else if (p.includes('vocal') || p.includes('acapella')) {
+          suggestions.push("Create a Vocal Processing Chain");
+          suggestions.push("Add Formant Shifting automation");
+          suggestions.push("Apply creative delay throws");
       }
-      return suggestions;
+      
+      // Refinements (Always available if not specific enough)
+      if (suggestions.length < 3) {
+          suggestions.push("Explain the Signal Flow visually");
+          suggestions.push("Suggest Macro Mappings for a Rack");
+          suggestions.push("Create an Audio Effect Rack for this");
+      }
+
+      // Context modifiers
+      suggestions.push("Simplify this for a beginner");
+      suggestions.push("Make it experimental and weird");
+      suggestions.push("Explain the theory behind this");
+
+      return suggestions.slice(0, 5); // Return top 5
   };
 
   const handleGenerate = async (textToUse?: string, modifier?: string) => {
@@ -427,6 +443,14 @@ const App: React.FC = () => {
         extraInstruction = "Make this response extremely SHORT and CONCISE. Bullet points only.";
         tempPrefs.outputLength = 'concise';
         tempPrefs.format = 'bullet_points';
+    } else if (modifier === 'Simplify this for a beginner') {
+        extraInstruction = "Explain this in simple terms suitable for a beginner. Avoid complex jargon.";
+        tempPrefs.detailLevel = 'beginner';
+    } else if (modifier === 'Make it experimental and weird') {
+        extraInstruction = "Suggest unconventional, experimental, and 'weird' techniques. Break the rules.";
+        tempPrefs.creativity = 'experimental';
+    } else if (modifier === 'Explain the theory behind this') {
+         extraInstruction = "Focus on the theoretical and music theory concepts behind this technique.";
     }
 
     setIsGenerating(true);
@@ -655,6 +679,8 @@ const App: React.FC = () => {
     let content = response;
     let mimeType = 'text/markdown';
     let extension = 'md';
+    const fileName = exportFilename.trim() || `ableton-guide-${new Date().toISOString().slice(0, 10)}`;
+
     let colors = standardThemeColors[exportThemeId];
     if (!colors) {
         const custom = customThemes.find(c => c.id === exportThemeId);
@@ -707,7 +733,7 @@ const App: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `ableton-guide-${new Date().toISOString().slice(0, 10)}.${extension}`;
+    a.download = `${fileName}.${extension}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -760,7 +786,7 @@ const App: React.FC = () => {
       
       {/* Help Modal */}
       {showHelp && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
            <div className="bg-ableton-surface border border-ableton-border shadow-2xl rounded-lg max-w-lg w-full p-0 flex flex-col relative overflow-hidden">
               <div className="p-4 border-b border-ableton-border bg-ableton-panel flex justify-between items-center">
                  <h2 className="text-lg font-bold text-ableton-text">LiveWire Help</h2>
@@ -801,10 +827,20 @@ const App: React.FC = () => {
 
       {/* Export Modal */}
       {showExportModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
            <div className="bg-ableton-surface border border-ableton-border shadow-2xl rounded-lg max-w-md w-full p-6 flex flex-col">
               <h3 className="text-lg font-bold text-ableton-text mb-4">Export Guide</h3>
               <div className="space-y-4 mb-6">
+                 <div className="space-y-2">
+                    <label className="text-xs text-ableton-muted uppercase tracking-wider font-bold">Filename</label>
+                    <input 
+                        type="text" 
+                        placeholder={`ableton-guide-${new Date().toISOString().slice(0, 10)}`} 
+                        value={exportFilename}
+                        onChange={(e) => setExportFilename(e.target.value)}
+                        className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-sm text-ableton-text focus:outline-none focus:border-ableton-accent"
+                    />
+                 </div>
                  <div className="space-y-2">
                     <label className="text-xs text-ableton-muted uppercase tracking-wider font-bold">Format</label>
                     <div className="grid grid-cols-2 gap-2">
@@ -841,7 +877,7 @@ const App: React.FC = () => {
 
       {/* Save Template Modal */}
       {showSaveModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
            <div className="bg-ableton-surface border border-ableton-border shadow-2xl rounded-lg max-w-2xl w-full p-6 flex flex-col max-h-[90vh]">
               <h3 className="text-lg font-bold text-ableton-text mb-4">Save Template</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -1081,9 +1117,20 @@ const App: React.FC = () => {
                                     ? `\n\n**Requested Variations**: Provide alternative arrangement ideas for the following sections:\n- ${vars.join('\n- ')}` 
                                     : "";
 
+                                let transitionFocus = "";
+                                switch(arrangeGenre) {
+                                    case 'Techno': transitionFocus = "Focus on tension-building transitions like white noise risers, filtered rumble kicks, and snare rolls."; break;
+                                    case 'House': transitionFocus = "Suggest transitions using reverse cymbals, filter sweeps on the master bus, and classic drum fills."; break;
+                                    case 'DnB': transitionFocus = "Emphasize rapid breakbeat edits, silence gaps, and heavy impact FX."; break;
+                                    case 'Ambient': transitionFocus = "Use slow reverb swells, delay feedback loops, and crossfading textures."; break;
+                                    case 'Pop': transitionFocus = "Include standard pop transitions: reverse crashes, vocal chops, and clear drum fills."; break;
+                                    default: transitionFocus = "Include creative transition ideas suitable for the genre.";
+                                }
+
                                 const toolPrompt = `Create a complete arrangement structure guide for a ${arrangeGenre} track with a ${arrangeEnergy} vibe. 
                                 Break it down into sections (Intro, Verse/Build, Drop/Chorus, etc.) with **specific bar counts**. 
-                                **Crucial**: Include specific transition ideas (automation curves, FX fills) between each section.${varInstruction}`;
+                                **Crucial**: Include specific transition ideas (automation curves, FX fills) between each section.
+                                **Transition Style**: ${transitionFocus}${varInstruction}`;
                                 setPrompt(toolPrompt);
                                 handleGenerate(toolPrompt);
                             }}
@@ -1262,6 +1309,13 @@ const App: React.FC = () => {
                 <div className="space-y-3 border-t border-ableton-border pt-4">
                     <h3 className="text-xs font-bold text-ableton-muted uppercase tracking-wider">Documentation & Meta-Tools</h3>
                     <div className="space-y-2">
+                        <input 
+                            type="text" 
+                            placeholder="Project Name / Title"
+                            value={docTitle}
+                            onChange={(e) => setDocTitle(e.target.value)}
+                            className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-xs text-ableton-text focus:outline-none focus:border-ableton-accent mb-2"
+                        />
                         <select value={docType} onChange={(e) => setDocType(e.target.value as any)} className="w-full bg-ableton-base border border-ableton-border rounded p-2 text-xs text-ableton-text focus:outline-none focus:border-ableton-accent">
                             <option value="user_manual">User Manual (EN/DE + HTML/MD)</option>
                             <option value="dev_specs">Developer Specifications & Meta-Prompt</option>
@@ -1271,10 +1325,11 @@ const App: React.FC = () => {
                             variant="secondary"
                             onClick={() => {
                                 let docPrompt = "";
+                                const titlePart = docTitle ? `titled "${docTitle}"` : "for this application";
                                 if (docType === 'user_manual') {
-                                    docPrompt = "Create a comprehensive User Manual for this 'LiveWire' application. \n\nOutput Requirements:\n1. Provide the content in both **English** and **German**.\n2. Format as **Markdown**.\n3. Include a section with the HTML code block for a standalone 'Help.html' page containing this manual.\n4. Cover features: MIDI Tools, Arrangement Architect, Stem Splitter, Theme Creator.";
+                                    docPrompt = `Create a comprehensive User Manual ${titlePart}. \n\nOutput Requirements:\n1. Provide the content in both **English** and **German**.\n2. Format as **Markdown**.\n3. Include a section with the HTML code block for a standalone 'Help.html' page containing this manual.\n4. Cover features: MIDI Tools, Arrangement Architect, Stem Splitter, Theme Creator.`;
                                 } else {
-                                    docPrompt = "Create advanced developer documentation for 'LiveWire'. \n\nOutput Requirements:\n1. **funct_python3.md**: Functional requirements tailored for a Python backend.\n2. **metaPrompt.md**: A master prompt to generate these specs.\n3. **Architecture**: Describe the React/TypeScript frontend and Gemini integration.\n4. Provide both English and German translations for the high-level summary.";
+                                    docPrompt = `Create advanced developer documentation ${titlePart}. \n\nOutput Requirements:\n1. **funct_python3.md**: Functional requirements tailored for a Python backend.\n2. **metaPrompt.md**: A master prompt to generate these specs.\n3. **Architecture**: Describe the React/TypeScript frontend and Gemini integration.\n4. Provide both English and German translations for the high-level summary.`;
                                 }
                                 setPrompt(docPrompt);
                                 handleGenerate(docPrompt);
@@ -1351,20 +1406,24 @@ const App: React.FC = () => {
                         <Button variant="secondary" onClick={() => setShowExportModal(true)} className="flex items-center gap-2 text-[10px] h-7 px-3">Export</Button>
                         <Button variant="secondary" onClick={openSaveModal} className="flex items-center gap-2 text-[10px] h-7 px-3">Save as Template</Button>
                      </div>
-                     <OutputDisplay content={response} imageUrl={responseImage} isStreaming={isGenerating} />
+                     <div className="transition-all duration-300 transform hover:shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+                         <OutputDisplay content={response} imageUrl={responseImage} isStreaming={isGenerating} />
+                     </div>
                      
                      {/* Intelligent Suggestions */}
-                     <div className="mt-4 border-t border-ableton-border pt-4 animate-in fade-in slide-in-from-top-4">
-                         <h4 className="text-[10px] text-ableton-muted uppercase tracking-wider font-bold mb-2 flex items-center gap-1">
-                             <svg className="w-3 h-3 text-ableton-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                     <div className="mt-6 border-t border-ableton-border pt-6 animate-in fade-in slide-in-from-top-4">
+                         <h4 className="text-[10px] text-ableton-muted uppercase tracking-wider font-bold mb-3 flex items-center gap-2">
+                             <div className="w-4 h-4 rounded-full bg-ableton-panel flex items-center justify-center border border-ableton-border">
+                                <svg className="w-2.5 h-2.5 text-ableton-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                             </div>
                              Intelligent Suggestions
                          </h4>
-                         <div className="flex gap-2">
+                         <div className="flex flex-wrap gap-2">
                              {getSmartSuggestions(lastPrompt).map((suggestion, idx) => (
                                  <button 
                                      key={idx}
-                                     onClick={() => { setPrompt(suggestion); handleGenerate(suggestion); }}
-                                     className="text-xs bg-ableton-panel hover:bg-ableton-accent hover:text-white text-ableton-text px-3 py-2 rounded transition-colors border border-ableton-border"
+                                     onClick={() => { setPrompt(suggestion); handleGenerate(suggestion, suggestion); }}
+                                     className="text-xs bg-ableton-panel hover:bg-ableton-surface text-ableton-text hover:text-ableton-accent px-4 py-2 rounded-full transition-all border border-ableton-border hover:border-ableton-accent shadow-sm"
                                  >
                                      {suggestion}
                                  </button>
