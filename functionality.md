@@ -49,11 +49,13 @@ Located within the `tools` tab in `App.tsx`, these functions construct complex p
 
 ### D. Export System
 *   **`performExport()`**:
-    *   **Input**: Current generated response, selected format (`md`, `html`, `pdf`), filename, and theme ID.
+    *   **Input**: Current generated response, selected formats (Array: `md`, `html`, `pdf`, `docx`, `json`, `xml`), filename, and theme ID.
+    *   **Markdown Processing**: Uses `simpleMarkdownToHtml` to convert the raw response into styled HTML, handling list indentation (`<ul>`/`<ol>` simulation via divs) and headers.
     *   **Logic**:
-        *   **HTML/PDF**: Wraps the markdown content in a localized HTML template injecting the selected theme's colors into the CSS `<style>` block.
+        *   **DOCX**: Exports HTML content with MS Office specific XML Namespaces (`xmlns:w`) to ensure Word renders the layout correctly.
         *   **PDF**: Opens a print window with the styled HTML.
-        *   **Download**: Creates a generic `Blob` and triggers a link click.
+        *   **JSON/XML**: Serializes the response data for structured use.
+        *   **Download**: Iterates through selected formats, creating Blobs and triggering simultaneous downloads.
 
 ### E. Theme System
 *   **`applyCustomTheme(customTheme)`**:

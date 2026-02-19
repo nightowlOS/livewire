@@ -46,6 +46,13 @@ export interface ShortcutMap {
     tabSettings: string;
 }
 
+export interface UserProfile {
+    id: string;
+    name: string;
+    avatar?: string;
+    role: 'admin' | 'user' | 'guest';
+}
+
 export interface UserPreferences {
   // Core
   detailLevel: 'beginner' | 'intermediate' | 'expert';
@@ -63,7 +70,7 @@ export interface UserPreferences {
   
   // New Configurations
   os: 'mac' | 'windows';
-  liveVersion: '12' | '11';
+  liveVersion: '12' | '11' | '10';
   genre: 'techno' | 'house' | 'hiphop' | 'ambient' | 'general';
   tone: 'encouraging' | 'professional' | 'technical';
   outputLength: 'concise' | 'balanced' | 'detailed';
@@ -80,4 +87,11 @@ export interface SavedTemplate {
   content: string;
   category?: string;
   createdAt: number;
+}
+
+export interface TutorialStep {
+  target: string; // The data-tour attribute value
+  title: string;
+  content: string;
+  position: 'top' | 'bottom' | 'left' | 'right' | 'center';
 }

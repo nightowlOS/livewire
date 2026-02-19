@@ -66,7 +66,8 @@ The layout mirrors the "Session View" vs "Browser" dichotomy of Ableton Live:
     *   Streams the request to Gemini.
 4.  **Output**:
     *   Streamed text is rendered in real-time.
-    *   Users can Edit, Save as Template, Export to PDF/MD, or regenerate with modifiers (e.g., "Make it simpler").
+    *   **Export**: Users can export the generated guide in multiple formats simultaneously (**PDF, DOCX, HTML, Markdown, JSON, XML**) with consistent styling applied.
+    *   **Templates**: Save useful workflows for later recall.
 
 ## 5. File Structure Concept
 ```

@@ -4,6 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LiveWire - Ableton Assistant</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -11,124 +14,74 @@
           extend: {
             colors: {
               ableton: {
-                base: 'var(--color-base)',       // Main background
-                surface: 'var(--color-surface)', // Sidebar/Header
-                panel: 'var(--color-panel)',     // Panels/Inputs
-                border: 'var(--color-border)',   // Borders
-                text: 'var(--color-text)',       // Main text
-                muted: 'var(--color-muted)',     // Secondary text
-                accent: 'var(--color-accent)',   // Brand orange
-                'accent-hover': 'var(--color-accent-hover)',
-                yellow: '#ffcc00'
+                base: '#121212',       // Darker base
+                surface: '#1E1E1E',    // Surface
+                panel: '#2A2A2A',      // Panel background
+                border: '#3A3A3A',     // Borders
+                text: '#E5E5E5',       // Primary text
+                muted: '#A0A0A0',      // Secondary text
+                accent: '#FF764D',     // Ableton Orange
+                'accent-hover': '#FF8F6B',
+                secondary: '#00A0FF',  // Blue accent
+                success: '#00FF99',    // Green accent
+                warning: '#FFCC00'     // Yellow accent
               }
             },
             fontFamily: {
-              mono: ['Menlo', 'Monaco', 'Courier New', 'monospace'],
-              sans: ['Inter', 'system-ui', 'sans-serif']
+              mono: ['"JetBrains Mono"', 'monospace'],
+              sans: ['"Inter"', 'sans-serif']
+            },
+            boxShadow: {
+              'glow': '0 0 10px rgba(255, 118, 77, 0.2)',
+              'glow-blue': '0 0 10px rgba(0, 160, 255, 0.2)'
             }
           }
         }
       }
     </script>
     <style>
-      :root {
-        /* Default Dark (Live 11/12 Dark) */
-        --color-base: #1a1a1a;
-        --color-surface: #222222;
-        --color-panel: #2a2a2a;
-        --color-border: #333333;
-        --color-text: #d9d9d9;
-        --color-muted: #9ca3af;
-        --color-accent: #ff764d;
-        --color-accent-hover: #ff8f6b;
-      }
-      
-      [data-theme="light"] {
-        --color-base: #f3f3f3;
-        --color-surface: #e6e6e6;
-        --color-panel: #dcdcdc;
-        --color-border: #b4b4b4;
-        --color-text: #1a1a1a;
-        --color-muted: #555555;
-        --color-accent: #ff764d;
-        --color-accent-hover: #ff5f30;
-      }
-
-      [data-theme="live9"] {
-        --color-base: #dcdcdc;
-        --color-surface: #c0c0c0;
-        --color-panel: #a0a0a0;
-        --color-border: #808080;
-        --color-text: #111111;
-        --color-muted: #444444;
-        --color-accent: #00a0ff; /* Live 9 Blue */
-        --color-accent-hover: #33b3ff;
-      }
-
-      [data-theme="vaporwave"] {
-        --color-base: #180d26;
-        --color-surface: #24123b;
-        --color-panel: #361a52;
-        --color-border: #4d2673;
-        --color-text: #ff99e6;
-        --color-muted: #a366ff;
-        --color-accent: #00f2ff; /* Cyan */
-        --color-accent-hover: #5cf7ff;
-      }
-
-      [data-theme="matrix"] {
-        --color-base: #000000;
-        --color-surface: #0a0a0a;
-        --color-panel: #111111;
-        --color-border: #003300;
-        --color-text: #00ff00;
-        --color-muted: #008f00;
-        --color-accent: #00ff00;
-        --color-accent-hover: #66ff66;
-      }
-
-      [data-theme="rust"] {
-        --color-base: #1c1917;
-        --color-surface: #292524;
-        --color-panel: #44403c;
-        --color-border: #57534e;
-        --color-text: #e7e5e4;
-        --color-muted: #a8a29e;
-        --color-accent: #ea580c; /* Orange-600 */
-        --color-accent-hover: #f97316;
-      }
-
-      [data-theme="ocean"] {
-        --color-base: #0f172a; /* Slate 900 */
-        --color-surface: #1e293b;
-        --color-panel: #334155;
-        --color-border: #475569;
-        --color-text: #e2e8f0;
-        --color-muted: #94a3b8;
-        --color-accent: #38bdf8; /* Sky 400 */
-        --color-accent-hover: #7dd3fc;
-      }
-
       body {
-        background-color: var(--color-base);
-        color: var(--color-text);
-        transition: background-color 0.3s ease, color 0.3s ease;
+        background-color: #121212;
+        color: #E5E5E5;
       }
       
       /* Custom Scrollbar */
       ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
+        width: 6px;
+        height: 6px;
       }
       ::-webkit-scrollbar-track {
-        background: var(--color-surface);
+        background: #1E1E1E;
       }
       ::-webkit-scrollbar-thumb {
-        background: #555;
-        border-radius: 4px;
+        background: #3A3A3A;
+        border-radius: 3px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: #777;
+        background: #FF764D;
+      }
+      
+      /* Range Slider Styling */
+      input[type=range] {
+        -webkit-appearance: none;
+        background: transparent;
+      }
+      input[type=range]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        height: 16px;
+        width: 16px;
+        border-radius: 50%;
+        background: #FF764D;
+        cursor: pointer;
+        margin-top: -6px;
+        box-shadow: 0 0 5px rgba(0,0,0,0.5);
+      }
+      input[type=range]::-webkit-slider-runnable-track {
+        width: 100%;
+        height: 4px;
+        cursor: pointer;
+        background: #3A3A3A;
+        border-radius: 2px;
       }
     </style>
   <script type="importmap">
@@ -144,5 +97,6 @@
 </head>
   <body>
     <div id="root"></div>
-  </body>
+  <script type="module" src="/index.tsx"></script>
+</body>
 </html>

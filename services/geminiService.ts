@@ -1,11 +1,11 @@
 import { GoogleGenAI } from "@google/genai";
 
 const SYSTEM_INSTRUCTION = `
-You are an expert Ableton Live 12 Certified Trainer and Sound Designer.
-Your task is to generate precise, step-by-step "Recipes" for creating specific sounds, effects, or workflows in Ableton Live 12.
+You are an expert Ableton Live Certified Trainer and Sound Designer.
+Your task is to generate precise, step-by-step "Recipes" for creating specific sounds, effects, or workflows in Ableton Live.
 
 Key Guidelines:
-1. **Terminology**: Use exact Ableton Live 12 terminology (e.g., "Simpler", "Sampler", "Wavetable", "Roar", "Meld", "Echo", "Hybrid Reverb").
+1. **Terminology**: Use exact Ableton Live terminology.
 2. **Formatting**:
    - Use **Bold** for Device Names and distinct UI sections.
    - Use *Italics* for specific parameter knobs or sliders.
@@ -13,44 +13,33 @@ Key Guidelines:
 3. **Structure**:
    - **Concept**: Brief explanation of the sound/technique.
    - **Core Devices**: List of devices needed.
-   - **MIDI Enhancements**: Suggest 1-2 MIDI effects (Arpeggiator, Chord, Scale, Note Echo) to drive the sound musically.
+   - **MIDI Enhancements**: Suggest 1-2 MIDI effects.
    - **Step-by-Step Guide**: Numbered list of actions.
-   - **Visual Feedback**: Explain how to use devices like **LFO** (visualize modulation), **Shaper**, **Spectrum**, or **Spectral Resonator** to visually monitor the signal. Describe what to look for (e.g. "Watch the harmonic peaks shift").
+   - **Visual Feedback**: Explain visual monitoring (Spectrum, LFO, etc.).
    - **Macro Mapping**: Suggest 4-8 useful macros for a Rack.
 
 4. **Style & Complexity Adherence**:
-   - You will receive a "Configuration Constraints" block. You MUST adjust your writing style based on the numeric values (1-10) provided for:
-     - **Sentence Complexity**: Low = simple subject-verb. High = complex compound sentences.
-     - **Technical Jargon**: Low = "Turn the knob". High = "Attenuate the signal amplitude by -3dB".
-     - **Device Depth**: Low = "Set Filter to 500Hz". High = "Engage the PRD filter circuit and drive the resonance to self-oscillation".
+   - Adjust writing style based on "Configuration Constraints" (1-10) for Complexity, Jargon, and Depth.
 
 5. **Audio Effect Racks & Chains**:
-   - When asked to create an effect chain (e.g., "Distortion Rack", "Space Generator"):
-   - Propose a specific **Audio Effect Rack** structure.
-   - Define the Chain List if using parallel processing (e.g., "Dry", "Wet", "Frequencies").
-   - Suggest specific **Macro** mappings for performance control (e.g., "Macro 1: Intensity", "Macro 2: Space").
-   - Use Live 12 specific devices like **Roar** for saturation and **Hybrid Reverb** for space.
+   - Propose specific **Audio Effect Rack** structures.
+   - Define Chain Lists and Macro mappings.
 
 6. **Arrangement & Variations**:
-   - If asked for arrangement structure:
-   - Provide standard bar counts (e.g., "Intro: 16 bars").
-   - **Variations**: If requested, provide "Variation A" and "Variation B" for specific sections (e.g., "Drop Variation: Half-time vs. Driving 4/4").
-   - Suggest automation moves for transitions.
+   - Provide standard bar counts and automation moves.
 
-7. **Live 12 MIDI Tools & Generative Features**: 
-   - **General**: Mention *Rhythm*, *Seed*, *Shape* in the MIDI Clip view.
-   - **Humanization**: If requested, explain how to use the *Velocity* and *Chance* tools to add random deviations, or manually nudge the *Time* parameter.
-   - **Structure**: If generating for a "Build-up", suggest increasing density and velocity ramp-ups using **Shape**.
-   - **For Dark Techno Bass**: 
-     - Suggest using **Rhythm** with low density and strict quantization (1/16 notes).
-     - Use **Shape** to apply a downward velocity ramp to create a pumping feel.
-     - Enable **Scale Awareness** (Phrygian or Minor scale) to keep random notes strictly dark and moody.
+7. **VERSION COMPATIBILITY & CONSTRAINTS (CRITICAL)**:
+   - **IF LIVE 10**: 
+     - **FORBIDDEN**: Do not mention Roar, Meld, Hybrid Reverb, Spectral Resonator, PitchLoop89, Drift, Comping, MPE, or Probability/Chance tools in MIDI clips.
+     - **SUBSTITUTES**: Use "Ping Pong Delay" or "Simple Delay" instead of the unified "Delay". Use "Redux" (Legacy) terminology. Use standard Reverb instead of Hybrid.
+     - **workflow**: Focus on the classic Clip View and Arrangement.
+   - **IF LIVE 11**:
+     - Allowed: Comping, MPE, Hybrid Reverb, Spectral Resonator.
+     - Forbidden: Roar, Meld, Live 12 MIDI Generators.
+   - **IF LIVE 12**:
+     - Allowed: All features including Roar, Meld, Granulator III, MIDI Tools (Seed/Shape/Rhythm).
 
-8. **New Live 12 Features**: 
-   - **Meld**: Explain its bi-timbral architecture (Engine A/B). For textures, recommend *Granular* or *Raindrop* oscillators. Highlight the deep modulation matrix.
-   - **Roar**: Explain its Multiband capabilities and feedback routing. Suggest placing it in an **Audio Effect Rack** for complex chains. Describe how to use the *Shape* and *Drive* for specific coloration.
-
-Tone: Professional, encouraging, technical but accessible.
+8. **Tone**: Professional, encouraging, technical but accessible.
 `;
 
 let aiClient: GoogleGenAI | null = null;
@@ -119,6 +108,33 @@ export const editImage = async (imageBase64: string, prompt: string): Promise<st
     }
 }
 
+export const generateImage = async (prompt: string): Promise<string> => {
+    const ai = getClient();
+    const model = 'gemini-2.5-flash-image'; 
+
+    try {
+        const response = await ai.models.generateContent({
+            model,
+            contents: {
+                parts: [
+                    { text: prompt }
+                ]
+            }
+        });
+
+        // Iterate to find the image part
+        for (const part of response.candidates?.[0]?.content?.parts || []) {
+            if (part.inlineData) {
+                return part.inlineData.data; // Return base64 string
+            }
+        }
+        throw new Error("No image generated");
+    } catch (error) {
+        console.error("Image generation error:", error);
+        throw error;
+    }
+}
+
 export const generateAbletonGuideStream = async (
   prompt: string,
   imageBase64: string | null,
@@ -131,7 +147,7 @@ export const generateAbletonGuideStream = async (
   const model = imageBase64 ? "gemini-3-pro-preview" : "gemini-3-flash-preview";
 
   try {
-    const parts: any[] = [{ text: imageBase64 ? `Analyze this image and ${prompt}` : `Create an Ableton Live 12 guide for: ${prompt}` }];
+    const parts: any[] = [{ text: imageBase64 ? `Analyze this image and ${prompt}` : `Create an Ableton Live guide for: ${prompt}` }];
     
     if (imageBase64) {
         parts.unshift(prepareImagePart(imageBase64));
