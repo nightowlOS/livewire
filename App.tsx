@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { generateAbletonGuideStream } from './services/geminiService';
 import { Button } from './components/Button';
 import { OutputDisplay } from './components/OutputDisplay';
+import { WorkflowPreset } from './types';
 
 const App: React.FC = () => {
   const [prompt, setPrompt] = useState<string>('');
@@ -27,6 +28,66 @@ const App: React.FC = () => {
   const [arrangeVarBreakdown, setArrangeVarBreakdown] = useState<boolean>(false);
   const [arrangeVarDrop, setArrangeVarDrop] = useState<boolean>(false);
   const [arrangeVarOutro, setArrangeVarOutro] = useState<boolean>(false);
+
+  // Preset Management
+  const [presets, setPresets] = useState<WorkflowPreset[]>(() => {
+    const saved = localStorage.getItem('ableton_architect_presets');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [presetName, setPresetName] = useState('');
+  const [showSavePreset, setShowSavePreset] = useState(false);
+
+  const savePreset = () => {
+    if (!presetName.trim()) return;
+    const newPreset: WorkflowPreset = {
+      id: Date.now().toString(),
+      name: presetName,
+      genre: arrangeGenre,
+      structure: arrangeStructure,
+      energy: arrangeEnergy,
+      transitionIntensity: arrangeTransitionIntensity,
+      key: arrangeKey,
+      scale: arrangeScale,
+      tempoMin: arrangeTempoMin,
+      tempoMax: arrangeTempoMax,
+      mood: arrangeMood,
+      variations: {
+        intro: arrangeVarIntro,
+        breakdown: arrangeVarBreakdown,
+        drop: arrangeVarDrop,
+        outro: arrangeVarOutro
+      },
+      createdAt: Date.now()
+    };
+    const updatedPresets = [...presets, newPreset];
+    setPresets(updatedPresets);
+    localStorage.setItem('ableton_architect_presets', JSON.stringify(updatedPresets));
+    setPresetName('');
+    setShowSavePreset(false);
+  };
+
+  const loadPreset = (preset: WorkflowPreset) => {
+    setArrangeGenre(preset.genre);
+    setArrangeStructure(preset.structure);
+    setArrangeEnergy(preset.energy);
+    setArrangeTransitionIntensity(preset.transitionIntensity);
+    setArrangeKey(preset.key);
+    setArrangeScale(preset.scale);
+    setArrangeTempoMin(preset.tempoMin);
+    setArrangeTempoMax(preset.tempoMax);
+    setArrangeMood(preset.mood);
+    setArrangeVarIntro(preset.variations.intro);
+    setArrangeVarBreakdown(preset.variations.breakdown);
+    setArrangeVarDrop(preset.variations.drop);
+    setArrangeVarOutro(preset.variations.outro);
+  };
+
+  const deletePreset = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = presets.filter(p => p.id !== id);
+    setPresets(updated);
+    localStorage.setItem('ableton_architect_presets', JSON.stringify(updated));
+  };
 
   const handleGenerate = async (promptText: string) => {
     setIsLoading(true);
@@ -78,11 +139,66 @@ const App: React.FC = () => {
             <div className="bg-ableton-surface border border-ableton-border rounded-xl overflow-hidden shadow-lg">
                  <div className="bg-ableton-panel px-4 py-3 border-b border-ableton-border flex justify-between items-center">
                     <h3 className="text-xs font-bold text-ableton-text uppercase tracking-widest">Configuration</h3>
-                    <div className="w-2 h-2 rounded-full bg-ableton-success shadow-[0_0_5px_rgba(0,255,153,0.5)]"></div>
+                    <div className="flex items-center gap-2">
+                        <button 
+                            onClick={() => setShowSavePreset(!showSavePreset)}
+                            className="text-[10px] uppercase tracking-wider text-ableton-accent hover:text-white transition-colors"
+                        >
+                            {showSavePreset ? 'Cancel' : 'Save Preset'}
+                        </button>
+                        <div className="w-2 h-2 rounded-full bg-ableton-success shadow-[0_0_5px_rgba(0,255,153,0.5)]"></div>
+                    </div>
                  </div>
                  
                  <div className="p-5 space-y-5">
                     
+                    {/* Preset Saver */}
+                    {showSavePreset && (
+                        <div className="bg-ableton-base p-3 rounded border border-ableton-border space-y-2 animate-in fade-in slide-in-from-top-2">
+                            <label className="text-[10px] font-bold text-ableton-muted uppercase tracking-wider">Save Current Workflow</label>
+                            <div className="flex gap-2">
+                                <input 
+                                    type="text" 
+                                    value={presetName}
+                                    onChange={(e) => setPresetName(e.target.value)}
+                                    placeholder="Preset Name..."
+                                    className="flex-1 bg-ableton-surface border border-ableton-border rounded p-1.5 text-xs text-ableton-text focus:outline-none focus:border-ableton-accent"
+                                />
+                                <button 
+                                    onClick={savePreset}
+                                    className="bg-ableton-accent text-white px-3 py-1 rounded text-xs uppercase font-bold hover:bg-ableton-accent-hover"
+                                >
+                                    Save
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Preset Loader */}
+                    {presets.length > 0 && (
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-ableton-muted uppercase tracking-wider">Load Preset</label>
+                            <div className="flex flex-wrap gap-2">
+                                {presets.map(preset => (
+                                    <div key={preset.id} className="group flex items-center bg-ableton-base border border-ableton-border rounded overflow-hidden hover:border-ableton-muted transition-colors cursor-pointer">
+                                        <span 
+                                            onClick={() => loadPreset(preset)}
+                                            className="px-2 py-1 text-xs text-ableton-text hover:text-white transition-colors"
+                                        >
+                                            {preset.name}
+                                        </span>
+                                        <button 
+                                            onClick={(e) => deletePreset(preset.id, e)}
+                                            className="px-1.5 py-1 text-ableton-muted hover:text-red-500 hover:bg-ableton-surface border-l border-ableton-border transition-colors"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Core Settings */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">

@@ -89,6 +89,27 @@ export interface SavedTemplate {
   createdAt: number;
 }
 
+export interface WorkflowPreset {
+  id: string;
+  name: string;
+  genre: string;
+  structure: string;
+  energy: string;
+  transitionIntensity: string;
+  key: string;
+  scale: string;
+  tempoMin: number;
+  tempoMax: number;
+  mood: string;
+  variations: {
+    intro: boolean;
+    breakdown: boolean;
+    drop: boolean;
+    outro: boolean;
+  };
+  createdAt: number;
+}
+
 export interface TutorialStep {
   target: string; // The data-tour attribute value
   title: string;
